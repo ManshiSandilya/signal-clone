@@ -8,6 +8,8 @@ A full-stack, real-time messaging application that faithfully replicates Signal 
 ![Tech Stack](https://img.shields.io/badge/Realtime-WebSockets-010101?logo=websocket)
 ![Tech Stack](https://img.shields.io/badge/Language-TypeScript-3178C6?logo=typescript)
 
+**🔴 Live Demo:** [https://signal-clone-theta.vercel.app](https://signal-clone-theta.vercel.app)
+
 ---
 
 ## Table of Contents
