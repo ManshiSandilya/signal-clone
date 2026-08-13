@@ -55,7 +55,12 @@ export default function RegisterPage() {
     } catch (err: any) {
       try {
         const errData = JSON.parse(err.message);
-        setError(errData.detail || "Registration failed");
+        const firstVal = Object.values(errData).flat()[0];
+        if (typeof firstVal === "string") {
+          setError(firstVal);
+        } else {
+          setError(errData.detail || "Registration failed");
+        }
       } catch {
         setError("Registration failed");
       }
