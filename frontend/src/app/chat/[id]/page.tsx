@@ -52,13 +52,14 @@ export default function ConversationPage() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      if (data.type === "message") {
+    if (data.type === "message") {
         setMessages((prev) => {
           const exists = prev.some((m) => m.id === data.data.id);
           if (exists) return prev.map((m) => (m.id === data.data.id ? data.data : m));
           return [...prev, data.data];
         });
         setTypingUser(null);
+        window.dispatchEvent(new CustomEvent("conversations:refresh"));
       } else if (data.type === "typing") {
         if (typingClearRef.current) clearTimeout(typingClearRef.current);
         if (data.is_typing) {
@@ -120,7 +121,17 @@ export default function ConversationPage() {
           <p className="text-xs text-signal-text-muted">
             {conversation.type === "group"
               ? `${conversation.participants.length} members`
-              : "Online"}
+              : (() => {
+                  const other = conversation.participants.find((p) => p.user.id !== me.id);
+                  if (!other) return "";
+                  if (other.user.is_online) return "Online";
+                  const mins = Math.floor((Date.now() - new Date(other.user.last_seen).getTime()) / 60000);
+                  if (mins < 1) return "Last seen just now";
+                  if (mins < 60) return `Last seen ${mins}m ago`;
+                  const hrs = Math.floor(mins / 60);
+                  if (hrs < 24) return `Last seen ${hrs}h ago`;
+                  return `Last seen ${Math.floor(hrs / 24)}d ago`;
+                })()}
           </p>
         </div>
       </div>

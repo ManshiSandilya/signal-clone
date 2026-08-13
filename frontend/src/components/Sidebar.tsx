@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { getConversations } from "@/lib/api";
 import { clearTokens } from "@/lib/api";
 import { Conversation, User } from "@/lib/types";
+import NewChatModal from "./NewChatModal";
 
 function conversationLabel(conv: Conversation, meId: string): string {
   if (conv.type === "group") return conv.name || "Group";
@@ -27,9 +28,20 @@ export default function Sidebar({ me }: { me: User }) {
   const pathname = usePathname();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
-    getConversations().then(setConversations).catch(console.error);
+ useEffect(() => {
+    function refresh() {
+      getConversations().then(setConversations).catch(console.error);
+    }
+    refresh();
+    window.addEventListener("conversations:refresh", refresh);
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      window.removeEventListener("conversations:refresh", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   const filtered = conversations.filter((c) =>
@@ -51,12 +63,21 @@ export default function Sidebar({ me }: { me: User }) {
           </div>
           <span className="font-medium text-sm text-signal-text">{me.display_name}</span>
         </div>
-        <button
-          onClick={handleLogout}
-          className="text-xs text-signal-text-muted hover:text-signal-text"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowModal(true)}
+            className="w-7 h-7 rounded-full bg-signal-blue text-white flex items-center justify-center text-lg leading-none hover:bg-signal-blue-dark"
+            title="New chat"
+          >
+            +
+          </button>
+          <button
+            onClick={handleLogout}
+            className="text-xs text-signal-text-muted hover:text-signal-text"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -110,7 +131,8 @@ export default function Sidebar({ me }: { me: User }) {
             </button>
           );
         })}
-      </div>
+     </div>
+      {showModal && <NewChatModal onClose={() => setShowModal(false)} />}
     </div>
   );
 }

@@ -84,3 +84,38 @@ export async function sendMessageRest(conversationId: string, body: string) {
   });
 }
 
+export async function searchContacts(query: string) {
+  return apiFetch(`/contacts/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function addContact(userId: string) {
+  return apiFetch("/contacts", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+export async function createConversation(
+  type: "direct" | "group",
+  participantIds: string[],
+  name?: string
+) {
+  return apiFetch("/conversations", {
+    method: "POST",
+    body: JSON.stringify({ type, participant_ids: participantIds, ...(name ? { name } : {}) }),
+  });
+}
+
+export async function addMember(conversationId: string, userId: string) {
+  return apiFetch(`/conversations/${conversationId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+export async function removeMember(conversationId: string, userId: string) {
+  return apiFetch(`/conversations/${conversationId}/members`, {
+    method: "DELETE",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
