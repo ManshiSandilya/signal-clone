@@ -56,12 +56,13 @@ export default function Sidebar({ me }: { me: User }) {
   function handleChatsTabClick() {
     setShowSettings(false);
     setActiveTab("chats");
+    router.push("/chat");
   }
 
   return (
-    <div className={`h-full flex-shrink-0 flex ${activeTab === "chats" || showSettings ? "border-r border-signal-border" : ""} lg:w-[360px] md:w-[84px] ${isChatOpen ? "hidden md:flex" : "w-full"}`}>
+    <div className={`h-full flex-shrink-0 flex border-r border-signal-border/50 lg:w-[360px] md:w-[84px] ${isChatOpen ? "hidden md:flex" : "w-full"}`}>
       {/* ── Left Navigation Strip (Signal Style) ────────────────────────── */}
-      <div className="w-[52px] bg-signal-nav flex flex-col items-center justify-between py-4 border-r border-signal-border flex-shrink-0">
+      <div className="w-[52px] bg-signal-nav flex flex-col items-center justify-between py-4 border-r border-signal-border/50 flex-shrink-0">
         <div className="flex flex-col items-center gap-4 w-full">
           {/* Hamburger Menu / Profile */}
           <button
@@ -91,36 +92,38 @@ export default function Sidebar({ me }: { me: User }) {
             </svg>
           </button>
 
-          {/* Calls Tab (Placeholder) */}
+          {/* Calls Tab */}
           <button
             onClick={() => {
               setShowSettings(false);
               setActiveTab("calls");
+              router.push("/chat");
             }}
             className={`w-10 h-10 rounded-lg flex items-center justify-center transition cursor-pointer ${
               activeTab === "calls" && !showSettings
                 ? "bg-signal-sidebar-active text-signal-text"
                 : "text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text"
             }`}
-            title="Calls (Placeholder)"
+            title="Calls"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill={activeTab === "calls" && !showSettings ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             </svg>
           </button>
 
-          {/* Stories Tab (Placeholder) */}
+          {/* Stories Tab */}
           <button
             onClick={() => {
               setShowSettings(false);
               setActiveTab("stories");
+              router.push("/chat");
             }}
             className={`w-10 h-10 rounded-lg flex items-center justify-center transition cursor-pointer ${
               activeTab === "stories" && !showSettings
                 ? "bg-signal-sidebar-active text-signal-text"
                 : "text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text"
             }`}
-            title="Stories (Placeholder)"
+            title="Stories"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill={activeTab === "stories" && !showSettings ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="8" y="5" width="11" height="15" rx="3" />

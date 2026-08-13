@@ -12,7 +12,7 @@ export default function ChatIndexPage() {
 
   if (activeTab === "calls") {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-signal-sidebar py-8 px-4 select-none h-full">
+      <div className="flex-1 flex flex-col items-center justify-center bg-signal-bg py-8 px-4 select-none h-full">
         <div className="flex flex-col items-center text-center">
           <div className="text-signal-text mb-4">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -37,7 +37,7 @@ export default function ChatIndexPage() {
 
   if (activeTab === "stories") {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-signal-sidebar py-8 px-4 select-none h-full">
+      <div className="flex-1 flex flex-col items-center justify-center bg-signal-bg py-8 px-4 select-none h-full">
         <div className="flex flex-col items-center text-center">
           <div className="text-signal-text mb-4">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
