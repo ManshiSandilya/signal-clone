@@ -1,464 +1,513 @@
-# Signal Clone - Secure Messaging Platform
+# Signal Clone — Secure Messaging Platform
 
-> A production-grade Signal messenger clone built with Next.js, Django, and WebSockets.
-> 
+A full-stack, real-time messaging application that faithfully replicates Signal Messenger's design, user experience, and core workflows. Built as a single-page application with a split-pane layout (conversation list + chat pane), real-time WebSocket messaging, and a privacy-focused interface.
 
-A full-stack implementation of Signal's core messaging workflows with real-time WebSocket communication, JWT authentication, and comprehensive contact/group management. Ready for technical interview and evaluation.
+![Tech Stack](https://img.shields.io/badge/Frontend-Next.js_16-black?logo=next.js)
+![Tech Stack](https://img.shields.io/badge/Backend-Django_6.1-092E20?logo=django)
+![Tech Stack](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite)
+![Tech Stack](https://img.shields.io/badge/Realtime-WebSockets-010101?logo=websocket)
+![Tech Stack](https://img.shields.io/badge/Language-TypeScript-3178C6?logo=typescript)
 
-## 🎯 Features
+---
 
-### Core Features
-- **Authentication**: Registration, login/logout with mocked OTP verification
-- **One-on-One Messaging**: Real-time direct messages with delivery/read receipts
-- **Group Messaging**: Create groups, manage members, send group messages
-- **Contacts**: Add and manage contacts with custom nicknames
-- **Presence**: Online status and last-seen indicators
-- **Message Status**: Sending → Sent → Delivered → Read progression
-- **Typing Indicators**: Real-time typing notifications
+## Table of Contents
 
-### Bonus Features
-- **Message Reactions**: React to messages with emoji
-- **Attachments**: File attachment support (UI implemented)
-- **Disappearing Messages**: Configure message auto-deletion timers
-- **Dark Mode Ready**: Tailwind CSS styling system
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture Overview](#architecture-overview)
+- [Database Schema](#database-schema)
+- [API Reference](#api-reference)
+- [WebSocket Protocol](#websocket-protocol)
+- [Project Structure](#project-structure)
+- [Setup & Installation](#setup--installation)
+- [Seed Data](#seed-data)
+- [Deployment](#deployment)
+- [Assumptions & Design Decisions](#assumptions--design-decisions)
 
-## 📋 Tech Stack
+---
 
-- **Frontend**: Next.js 14 (TypeScript) with Tailwind CSS
-- **Backend**: Django with Django REST Framework
-- **Real-time**: WebSockets via Django Channels
-- **Database**: SQLite
-- **Authentication**: JWT (rest_framework_simplejwt)
-- **Async**: Channels with async context
+## Features
 
-## 🚀 Quick Start
+### Core (Fully Implemented)
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- SQLite3
+| Feature | Description |
+|---------|-------------|
+| **Authentication** | Register with phone/username + mocked OTP → set display name → JWT login/logout with session persistence |
+| **Conversation List** | Signal-style left sidebar with unread badges, last-message preview, online indicators, and search |
+| **1-on-1 Messaging** | Real-time direct messaging via WebSockets with message persistence |
+| **Group Messaging** | Create named groups, send/receive group messages, admin controls for add/remove members |
+| **Delivery Receipts** | Single ✓ (sent) → double ✓ (delivered) → blue ✓✓ (read) — just like Signal |
+| **Typing Indicators** | Real-time "Alice is typing..." shown to other participants |
+| **Message Timestamps** | Inline timestamps on every message bubble |
+| **Online / Last Seen** | Green dot + "Last seen 5m ago" on conversation headers |
+| **Search** | Filter conversations by name in the sidebar |
+| **Contact Management** | Add contacts by username, view contact list |
+| **Profile Update** | Edit display name and avatar URL via PATCH /api/auth/me |
+| **Group Settings** | Admin can update group name and avatar |
+| **Message Deletion** | Soft-delete messages (sender only), body is cleared, "deleted" flag propagated via WS |
+| **Leave / Delete Chat** | Leave a group or delete a direct conversation |
+| **File Attachments** | Upload files to messages (25 MB limit with server-side validation) |
+| **Emoji Reactions** | React to messages with emoji, remove reactions (POST/DELETE) |
+| **Disappearing Messages** | Configurable auto-delete timer per conversation |
+| **Dark/Light UI** | Signal's clean, white-and-blue design language |
 
-### Backend Setup
+### Placeholder Sections
 
-```bash
-# Navigate to backend
-cd d:/signal-clone
+| Feature | Status |
+|---------|--------|
+| Voice / Video Calls | Placeholder in settings menu |
+| Stories | Placeholder |
+| Linked Devices | Placeholder |
+| End-to-End Encryption | Simulated — messages are transmitted over WS and stored in SQLite; no real E2E crypto |
 
-# Create virtual environment
-python -m venv venv
-source venv/Scripts/activate  # Windows: venv\Scripts\activate
+---
 
-# Install dependencies
-pip install -r requirements.txt
+## Tech Stack
 
-# Apply migrations
-python manage.py migrate
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| **Frontend** | Next.js 16 (App Router, TypeScript) | Server components, file-based routing, excellent DX |
+| **Styling** | Tailwind CSS 4 | Rapid UI development with Signal's design tokens |
+| **Backend** | Django 6.1 + Django REST Framework | Mature ORM, admin panel, proven at scale |
+| **Real-time** | Django Channels (WebSockets) | Native Django integration, async consumer pattern |
+| **Auth** | JWT via `djangorestframework-simplejwt` | Stateless, frontend-friendly token auth |
+| **ASGI Server** | Daphne | Required for Channels WebSocket support |
+| **Database** | SQLite | Zero-config, file-based — perfect for this scope |
+| **Channel Layer** | In-Memory | Suitable for single-process dev; swap to Redis for production |
 
-# Create sample data (optional)
-python manage.py seed_demo_data
+---
 
-# Run development server
-python manage.py runserver
+## Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        Browser (Client)                      │
+│  ┌──────────────┐   ┌──────────────────────────────────────┐ │
+│  │   Sidebar     │   │           Chat Pane                  │ │
+│  │  (REST API)   │   │  REST (send/fetch) + WebSocket (live)│ │
+│  └──────┬───────┘   └──────────┬───────────────────────────┘ │
+└─────────┼──────────────────────┼─────────────────────────────┘
+          │ HTTP                 │ HTTP + WS
+          ▼                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Daphne (ASGI Server)                     │
+│  ┌─────────────────────┐   ┌──────────────────────────────┐ │
+│  │   DRF Views (REST)   │   │  Channels Consumer (WebSocket)│ │
+│  │  /api/conversations  │   │  /ws/chat/<id>/               │ │
+│  │  /api/messages       │   │  Actions: send, typing, react │ │
+│  │  /api/auth/*         │   │  Events: message, receipt,    │ │
+│  │  /api/contacts       │   │          typing indicator     │ │
+│  └──────────┬──────────┘   └──────────┬───────────────────┘ │
+│             │                         │                      │
+│             ▼                         ▼                      │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Django ORM + SQLite Database              │   │
+│  │   Users │ Contacts │ Conversations │ Messages │ ...   │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-The backend will be available at `http://127.0.0.1:8000`
+### Request Flow
 
-### Frontend Setup
+1. **Authentication**: Client sends credentials → backend returns JWT access + refresh tokens → stored in `localStorage`.
+2. **Fetching data**: Sidebar loads conversations via `GET /api/conversations`; clicking a chat fetches messages via REST.
+3. **Real-time messaging**: Opening a chat also establishes a WebSocket to `/ws/chat/<id>/`. Messages sent via WS are broadcast to all participants and persisted.
+4. **Hybrid approach**: REST endpoints handle CRUD; WebSocket handles real-time broadcasting. REST actions (e.g., adding a reaction via POST) also broadcast via WS using `async_to_sync`.
+
+---
+
+## Database Schema
+
+```
+┌─────────────────────┐       ┌─────────────────────────────┐
+│       User          │       │         Contact              │
+├─────────────────────┤       ├─────────────────────────────┤
+│ id (UUID, PK)       │       │ id (UUID, PK)               │
+│ phone_or_username   │◄──────│ owner_id (FK → User)        │
+│ display_name        │       │ contact_user_id (FK → User) │
+│ avatar_url          │       │ nickname                    │
+│ is_online           │       │ added_at                    │
+│ last_seen           │       └─────────────────────────────┘
+│ password (hashed)   │
+│ created_at          │
+└────────┬────────────┘
+         │
+         │  participates in
+         ▼
+┌─────────────────────────────┐     ┌──────────────────────────┐
+│  ConversationParticipant    │     │      Conversation         │
+├─────────────────────────────┤     ├──────────────────────────┤
+│ id (UUID, PK)               │     │ id (UUID, PK)            │
+│ conversation_id (FK) ───────┼────►│ type (direct | group)    │
+│ user_id (FK → User)         │     │ name                     │
+│ role (admin | member)       │     │ avatar_url               │
+│ joined_at                   │     │ created_by (FK → User)   │
+│ last_read_at                │     │ last_message (FK → Msg)  │
+└─────────────────────────────┘     │ last_activity_at         │
+                                    │ disappearing_seconds     │
+                                    │ created_at               │
+                                    └──────────┬───────────────┘
+                                               │
+                                               │ has many
+                                               ▼
+┌──────────────────────────┐     ┌───────────────────────────┐
+│        Message            │     │      MessageStatus         │
+├──────────────────────────┤     ├───────────────────────────┤
+│ id (UUID, PK)            │     │ id (UUID, PK)             │
+│ conversation_id (FK)     │     │ message_id (FK → Message) │
+│ sender_id (FK → User)    │     │ user_id (FK → User)       │
+│ body (text)              │     │ status (sent|delivered|    │
+│ reply_to (FK → self)     │     │         read)             │
+│ created_at               │     │ updated_at                │
+│ is_deleted               │     └───────────────────────────┘
+└──────┬───────────────────┘
+       │
+       │ has one                  has many
+       ▼                          ▼
+┌──────────────────────┐   ┌──────────────────────┐
+│    Attachment         │   │      Reaction         │
+├──────────────────────┤   ├──────────────────────┤
+│ id (UUID, PK)        │   │ id (UUID, PK)        │
+│ message_id (FK)      │   │ message_id (FK)      │
+│ file (FileField)     │   │ user_id (FK → User)  │
+│ file_name            │   │ emoji (max 8 chars)  │
+│ file_type            │   │ created_at           │
+│ file_size            │   └──────────────────────┘
+│ uploaded_at          │
+└──────────────────────┘
+```
+
+### Key Design Decisions
+
+- **UUIDs as primary keys** — prevents enumeration attacks and is frontend-friendly.
+- **`is_deleted` soft-delete** — preserves message history for admin/compliance while hiding from UI.
+- **`last_read_at` on participant** — enables efficient unread count: `messages WHERE created_at > last_read_at`.
+- **Per-recipient `MessageStatus`** — supports per-user sent/delivered/read tracking (Signal's double-tick system).
+- **`unique_together` constraints** — prevent duplicate participants, duplicate reactions per user, and duplicate contacts.
+- **`last_message` + `last_activity_at` on Conversation** — denormalized for O(1) sidebar rendering without joins.
+
+---
+
+## API Reference
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/send-otp` | Request OTP (mocked, always `123456`) |
+| `POST` | `/api/auth/register` | Register with phone/username + OTP + password + display_name |
+| `POST` | `/api/auth/login` | Login, returns JWT access + refresh tokens |
+| `GET` | `/api/auth/me` | Get authenticated user's profile |
+| `PATCH` | `/api/auth/me` | Update display_name and/or avatar_url |
+
+### Contacts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/contacts` | List all contacts |
+| `POST` | `/api/contacts` | Add a contact by phone_or_username |
+| `GET` | `/api/contacts/search?q=` | Search users by name or username |
+
+### Conversations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/conversations` | List user's conversations (sorted by recent activity) |
+| `POST` | `/api/conversations` | Create direct or group conversation |
+| `GET` | `/api/conversations/<id>` | Get single conversation detail |
+| `PATCH` | `/api/conversations/<id>` | Update group name/avatar (admin only) |
+| `DELETE` | `/api/conversations/<id>/leave` | Leave group or delete direct chat |
+
+### Messages
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/conversations/<id>/messages` | List messages (excludes soft-deleted) |
+| `POST` | `/api/conversations/<id>/messages` | Send a text message |
+| `DELETE` | `/api/messages/<id>` | Soft-delete a message (sender only) |
+| `POST` | `/api/conversations/<id>/read` | Mark all messages as read |
+
+### Attachments & Reactions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/messages/<id>/attachment` | Upload file attachment (max 25 MB) |
+| `POST` | `/api/messages/<id>/reactions` | Add/replace emoji reaction |
+| `DELETE` | `/api/messages/<id>/reactions` | Remove your reaction |
+
+### Group Members
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/conversations/<id>/members` | List group members |
+| `POST` | `/api/conversations/<id>/members` | Add member (admin only) |
+| `DELETE` | `/api/conversations/<id>/members` | Remove member (admin only) |
+
+### Disappearing Messages
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/conversations/<id>/disappearing` | Set timer (0 = off) |
+
+All endpoints (except auth) require `Authorization: Bearer <token>` header.
+
+---
+
+## WebSocket Protocol
+
+### Connection
+
+```
+ws://host:8000/ws/chat/<conversation_id>/?token=<jwt_access_token>
+```
+
+The JWT is validated in middleware. Unauthenticated connections are closed with code `4401`; non-participants with `4403`.
+
+### Client → Server Actions
+
+```jsonc
+// Send a message
+{ "action": "send_message", "body": "Hello!", "reply_to": null }
+
+// Typing indicator
+{ "action": "typing", "is_typing": true }
+
+// Mark messages as read
+{ "action": "mark_read" }
+
+// Add reaction
+{ "action": "react", "message_id": "<uuid>", "emoji": "❤️" }
+```
+
+### Server → Client Events
+
+```jsonc
+// New or updated message
+{ "type": "message", "data": { /* full MessageSerializer output */ } }
+
+// Typing indicator
+{ "type": "typing", "user_id": "...", "display_name": "Alice", "is_typing": true }
+
+// Read receipt
+{ "type": "read_receipt", "user_id": "..." }
+
+// Delivery receipt
+{ "type": "delivery_receipt", "user_id": "..." }
+
+// Settings update (disappearing timer, group name change)
+{ "type": "settings_update", "disappearing_seconds": 300 }
+```
+
+### Reconnection
+
+The frontend implements exponential backoff (1s → 2s → 4s → 8s → max 30s) with automatic reconnection on disconnect.
+
+---
+
+## Project Structure
+
+```
+signal-clone/
+├── accounts/                    # Django app: users, auth, contacts
+│   ├── models.py               # User (custom), Contact
+│   ├── views.py                # register, login, me, contacts, search
+│   ├── serializers.py          # Validation & representation
+│   └── urls.py                 # /api/auth/*, /api/contacts*
+│
+├── chat/                        # Django app: messaging
+│   ├── models.py               # Conversation, Participant, Message,
+│   │                           # MessageStatus, Attachment, Reaction
+│   ├── views.py                # REST endpoints for all chat operations
+│   ├── serializers.py          # Validation & representation
+│   ├── consumers.py            # WebSocket consumer (ChatConsumer)
+│   ├── middleware.py           # JWT auth for WebSocket connections
+│   ├── routing.py              # WebSocket URL routing
+│   ├── urls.py                 # /api/conversations*, /api/messages*
+│   └── management/commands/
+│       └── seed_demo_data.py   # Database seeder
+│
+├── config/                      # Django project configuration
+│   ├── settings.py             # All Django settings
+│   ├── urls.py                 # Root URL configuration
+│   ├── asgi.py                 # ASGI entrypoint (Daphne + Channels)
+│   └── wsgi.py                 # WSGI fallback
+│
+├── frontend/                    # Next.js 16 application
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── layout.tsx      # Root layout with metadata
+│   │   │   ├── page.tsx        # Root redirect (→ /chat or /login)
+│   │   │   ├── globals.css     # Signal design tokens (Tailwind theme)
+│   │   │   ├── login/page.tsx  # Login form
+│   │   │   ├── register/page.tsx # Multi-step registration
+│   │   │   └── chat/
+│   │   │       ├── layout.tsx  # Auth guard + sidebar layout
+│   │   │       ├── page.tsx    # Empty state ("Select a conversation")
+│   │   │       └── [id]/page.tsx # Conversation view + WebSocket
+│   │   ├── components/
+│   │   │   ├── Sidebar.tsx             # Left panel with chat list
+│   │   │   ├── ConversationListItem.tsx # Single chat row
+│   │   │   ├── MessageBubble.tsx       # Message bubble with receipts
+│   │   │   ├── NewChatModal.tsx        # Create direct/group chat
+│   │   │   ├── AddContactModal.tsx     # Add contact form
+│   │   │   └── GroupInfoModal.tsx      # Group member management
+│   │   └── lib/
+│   │       ├── api.ts          # REST client (fetch wrapper + auth)
+│   │       └── types.ts        # TypeScript interfaces
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── .env.example                 # Environment variable template
+├── .gitignore
+├── manage.py
+└── README.md                    # ← You are here
+```
+
+---
+
+## Setup & Installation
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- Git
+
+### 1. Clone the Repository
 
 ```bash
-# Navigate to frontend
+git clone https://github.com/<your-username>/signal-clone.git
+cd signal-clone
+```
+
+### 2. Backend Setup
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install django djangorestframework djangorestframework-simplejwt \
+            django-cors-headers channels daphne python-dotenv
+
+# Copy environment file
+cp .env.example .env
+
+# Run migrations
+python manage.py migrate
+
+# Seed demo data (creates 4 users with conversations)
+python manage.py seed_demo_data
+
+# Start backend server
+daphne -b 127.0.0.1 -p 8000 config.asgi:application
+```
+
+### 3. Frontend Setup
+
+```bash
+# In a new terminal
 cd frontend
 
 # Install dependencies
 npm install
 
-# Set environment variables (create .env.local)
+# Create environment file
 echo "NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api" > .env.local
 echo "NEXT_PUBLIC_WS_URL=ws://127.0.0.1:8000" >> .env.local
 
-# Run development server
+# Start development server
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3000`
+### 4. Open the App
 
-## 🏗️ Architecture Overview
-
-### Frontend Architecture
-```
-frontend/
-├── app/
-│   ├── login/          # Login page
-│   ├── register/       # Registration flow
-│   ├── chat/           # Chat interface
-│   │   ├── page.tsx    # Conversation list
-│   │   └── [id]/       # Individual conversation
-│   └── layout.tsx      # Root layout with sidebar
-├── components/         # Reusable UI components
-│   ├── Sidebar.tsx     # Conversation list + navigation
-│   ├── MessageBubble.tsx # Message display with reactions
-│   ├── NewChatModal.tsx # New conversation modal
-│   ├── AddContactModal.tsx # Add contact modal
-│   └── GroupInfoModal.tsx  # Group info & member management
-├── lib/
-│   ├── api.ts          # API client functions
-│   └── types.ts        # TypeScript type definitions
-└── globals.css         # Tailwind & global styles
-```
-
-### Backend Architecture
-```
-backend/
-├── config/             # Django settings & ASGI
-├── accounts/           # Authentication & user management
-│   ├── models.py       # User & Contact models
-│   ├── views.py        # Auth endpoints
-│   └── serializers.py  # DRF serializers
-├── chat/               # Messaging
-│   ├── models.py       # Conversation, Message, etc.
-│   ├── views.py        # REST endpoints
-│   ├── consumers.py    # WebSocket handlers
-│   ├── routing.py      # WebSocket URL routing
-│   └── serializers.py  # Message serializers
-└── db.sqlite3          # Database
-```
-
-### Technology Decisions
-- **WebSockets via Channels**: Real-time messaging with bidirectional communication
-- **JWT Authentication**: Stateless, scalable authentication
-- **Async Views**: Non-blocking WebSocket handlers for concurrency
-- **DRF for REST**: Clean, testable API layer
-- **Next.js App Router**: Modern, file-based routing with SSR ready
-
-## 📦 Database Schema
-
-### User Model
-```sql
-CREATE TABLE accounts_user (
-  id VARCHAR(36) PRIMARY KEY,
-  phone_or_username VARCHAR(150) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  display_name VARCHAR(150) NOT NULL,
-  avatar_url VARCHAR(200),
-  is_online BOOLEAN DEFAULT FALSE,
-  last_seen DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Contact Model
-```sql
-CREATE TABLE accounts_contact (
-  id VARCHAR(36) PRIMARY KEY,
-  owner_id VARCHAR(36) REFERENCES accounts_user(id),
-  contact_user_id VARCHAR(36) REFERENCES accounts_user(id),
-  nickname VARCHAR(255),
-  added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(owner_id, contact_user_id)
-);
-```
-
-### Conversation Model
-```sql
-CREATE TABLE chat_conversation (
-  id VARCHAR(36) PRIMARY KEY,
-  type VARCHAR(10), -- 'direct' or 'group'
-  name VARCHAR(150), -- NULL for direct
-  avatar_url VARCHAR(200),
-  created_by_id VARCHAR(36) REFERENCES accounts_user(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_message_id VARCHAR(36),
-  last_activity_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  disappearing_seconds INTEGER DEFAULT 0
-);
-```
-
-### ConversationParticipant Model
-```sql
-CREATE TABLE chat_conversationparticipant (
-  id VARCHAR(36) PRIMARY KEY,
-  conversation_id VARCHAR(36) REFERENCES chat_conversation(id),
-  user_id VARCHAR(36) REFERENCES accounts_user(id),
-  role VARCHAR(10) DEFAULT 'member', -- 'member' or 'admin'
-  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(conversation_id, user_id)
-);
-```
-
-### Message Model
-```sql
-CREATE TABLE chat_message (
-  id VARCHAR(36) PRIMARY KEY,
-  conversation_id VARCHAR(36) REFERENCES chat_conversation(id),
-  sender_id VARCHAR(36) REFERENCES accounts_user(id),
-  body TEXT NOT NULL,
-  reply_to_id VARCHAR(36) REFERENCES chat_message(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  is_deleted BOOLEAN DEFAULT FALSE
-);
-```
-
-### MessageStatus Model
-```sql
-CREATE TABLE chat_messagestatus (
-  id VARCHAR(36) PRIMARY KEY,
-  message_id VARCHAR(36) REFERENCES chat_message(id),
-  user_id VARCHAR(36) REFERENCES accounts_user(id),
-  status VARCHAR(10), -- 'sent', 'delivered', 'read'
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(message_id, user_id)
-);
-```
-
-### Attachment Model
-```sql
-CREATE TABLE chat_attachment (
-  id VARCHAR(36) PRIMARY KEY,
-  message_id VARCHAR(36) REFERENCES chat_message(id),
-  file VARCHAR(500),
-  file_name VARCHAR(255),
-  file_type VARCHAR(100),
-  file_size INTEGER,
-  uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Reaction Model
-```sql
-CREATE TABLE chat_reaction (
-  id VARCHAR(36) PRIMARY KEY,
-  message_id VARCHAR(36) REFERENCES chat_message(id),
-  user_id VARCHAR(36) REFERENCES accounts_user(id),
-  emoji VARCHAR(8),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(message_id, user_id)
-);
-```
-
-## 🔌 API Endpoints
-
-### Authentication
-- `POST /api/auth/send-otp` - Send OTP (mocked)
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/me` - Get current user
-
-### Contacts
-- `GET /api/contacts` - List user's contacts
-- `POST /api/contacts` - Add new contact
-- `GET /api/contacts/search?q=query` - Search users
-
-### Conversations
-- `GET /api/conversations` - List conversations
-- `POST /api/conversations` - Create conversation
-- `GET /api/conversations/{id}` - Get conversation details
-- `GET /api/conversations/{id}/messages` - Get messages
-- `POST /api/conversations/{id}/messages` - Send message (REST)
-- `POST /api/conversations/{id}/read` - Mark as read
-- `GET /api/conversations/{id}/members` - List members
-- `POST /api/conversations/{id}/members` - Add member
-- `DELETE /api/conversations/{id}/members` - Remove member
-- `POST /api/conversations/{id}/disappearing` - Set disappearing timer
-
-### Messages
-- `POST /api/messages/{id}/attachment` - Upload attachment
-- `POST /api/messages/{id}/reactions` - Add reaction
-- `DELETE /api/messages/{id}/reactions` - Remove reaction
-
-### WebSocket
-- **URL**: `ws://127.0.0.1:8000/ws/chat/{conversation_id}/?token={jwt_token}`
-- **Actions**:
-  - `send_message`: `{"action": "send_message", "body": "text"}`
-  - `typing`: `{"action": "typing", "is_typing": true}`
-  - `mark_read`: `{"action": "mark_read"}`
-  - `react`: `{"action": "react", "message_id": "id", "emoji": "😀"}`
-
-## 🔐 Authentication Flow
-
-1. **Registration**:
-   - User enters phone/username and password
-   - System sends OTP (mocked, always "123456")
-   - User enters OTP
-   - User fills profile (display name)
-   - Account created, JWT tokens returned
-
-2. **Login**:
-   - User enters phone/username and password
-   - System validates credentials
-   - JWT tokens returned, stored in localStorage
-
-3. **Token Usage**:
-   - Access token sent in `Authorization: Bearer <token>` header
-   - Refresh token stored for future token renewal
-   - Token lifetime: 7 days (configurable)
-
-## 🔄 Message Status Flow
-
-1. **Sending**: Initial local state while waiting for server ACK
-2. **Sent**: Server accepted, stored in DB, "single tick" displayed
-3. **Delivered**: Recipient WebSocket connection received the message, "double tick"
-4. **Read**: Recipient marked message as read, "blue double tick"
-
-### Important Notes
-- REST path creates "sent" status for other users
-- WebSocket path creates "sent" status (updated to match REST)
-- Status updates broadcast to all conversation participants in real-time
-- Own messages show tick progression based on other users' statuses
-
-## 📁 Project Structure
-
-```
-signal-clone/
-├── frontend/                 # Next.js frontend
-├── config/                   # Django settings
-├── accounts/                 # User & auth app
-├── chat/                     # Messaging app
-├── manage.py
-├── db.sqlite3
-├── requirements.txt          # Python dependencies
-└── README.md                 # This file
-```
-
-## 🧪 Testing
-
-### Backend Tests
-```bash
-python manage.py test accounts chat
-```
-
-### Frontend Tests (Vitest/Jest)
-```bash
-cd frontend
-npm test
-```
-
-## 🚢 Deployment
-
-### Backend (Render/Railway/Heroku)
-1. Set `DEBUG = False` in settings.py
-2. Configure `ALLOWED_HOSTS`
-3. Set up PostgreSQL for production
-4. Deploy with: `git push heroku main` or equivalent
-5. Run migrations: `heroku run python manage.py migrate`
-
-### Frontend (Vercel)
-1. Connect GitHub repository
-2. Set environment variables:
-   - `NEXT_PUBLIC_API_URL`
-   - `NEXT_PUBLIC_WS_URL`
-3. Deploy automatically on push
-
-## 🔐 Security Considerations
-
-**Production Checklist**:
-- [ ] Change `SECRET_KEY` in settings.py
-- [ ] Set `DEBUG = False`
-- [ ] Configure CORS properly (not `*`)
-- [ ] Use HTTPS/WSS only
-- [ ] Set `SECURE_SSL_REDIRECT = True`
-- [ ] Configure CSRF settings for production
-- [ ] Use strong passwords for test accounts
-- [ ] Implement rate limiting on auth endpoints
-- [ ] Add input validation for file uploads
-- [ ] Implement proper encryption for sensitive data
-
-## 🎨 Design System
-
-### Colors (Tailwind)
-- `signal-blue`: Primary accent (#3B82F6)
-- `signal-bg`: Light background (#FFFFFF)
-- `signal-sidebar`: Sidebar background (#F3F3F3)
-- `signal-border`: Border color (#E5E5E5)
-- `signal-text`: Primary text (#000000)
-- `signal-text-muted`: Muted text (#999999)
-
-### Components
-All components follow Signal's design language:
-- Rounded buttons and inputs (rounded-full, rounded-lg)
-- Subtle shadows and borders
-- Clean whitespace and typography
-- Responsive design (320px+)
-
-## 🐛 Known Limitations & Future Improvements
-
-### Limitations
-1. **OTP is mocked** - Always "123456", no real SMS/email
-2. **No encryption** - Messages sent in plaintext (can be enhanced)
-3. **File storage** - Attachments stored locally (use cloud storage for production)
-4. **No video calls** - Listed as placeholder/coming soon
-5. **No end-to-end encryption** - Keys exchanged but not used for encryption
-
-### Future Improvements
-1. Implement real E2E encryption (Signal protocol)
-2. Add voice/video call support (WebRTC)
-3. Implement message search
-4. Add story/status feature
-5. Multi-device support
-6. Message pinning
-7. Custom themes
-8. Message reactions limit to available emoji set
-
-## 📚 Documentation
-
-### Setup Instructions
-- [Backend Setup](docs/BACKEND_SETUP.md)
-- [Frontend Setup](docs/FRONTEND_SETUP.md)
-
-### Development
-- [API Reference](docs/API.md)
-- [WebSocket Events](docs/WEBSOCKET.md)
-- [Component Guide](docs/COMPONENTS.md)
-
-## 🤝 Contributing
-
-This is an assignment project. For improvements:
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with clear commit messages
-4. Submit a pull request
-
-## 📄 License
-
-This project is provided as-is for educational purposes.
-
-## 👨‍💼 Support
-
-For issues or questions:
-1. Check the troubleshooting section below
-2. Review the codebase comments
-3. Check Django/Next.js documentation
-
-### Troubleshooting
-
-**WebSocket Connection Fails**
-- Ensure Daphne is running (Django Channels)
-- Check ASGI configuration in settings.py
-- Verify WebSocket URL includes JWT token
-
-**Messages Not Appearing**
-- Check browser DevTools Console for errors
-- Verify WebSocket connection status
-- Ensure message database was created
-
-**Authentication Issues**
-- OTP is always "123456" in mocked mode
-- Check JWT token expiration (7 days)
-- Ensure localStorage is enabled
-
-**CORS Errors**
-- Verify `CORS_ALLOW_ALL_ORIGINS = True` (or configure specific origins)
-- Check origin headers in browser requests
-
-## 🎓 Learning Resources
-
-- [Django Channels Documentation](https://channels.readthedocs.io/)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Django REST Framework](https://www.django-rest-framework.org/)
-- [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
-- [Signal Protocol](https://signal.org/docs/) (for reference)
+Navigate to **http://localhost:3000** in your browser.
 
 ---
 
-**Last Updated**: 2026-08-13
-**Version**: 1.0.0
+## Seed Data
+
+The `seed_demo_data` management command creates a ready-to-use environment:
+
+| Username | Display Name | Password |
+|----------|-------------|----------|
+| `manu` | Manu | `password123` |
+| `riya` | Riya Sharma | `password123` |
+| `amit` | Amit Verma | `password123` |
+| `sneha` | Sneha Patel | `password123` |
+
+**Pre-created data:**
+- All users are mutual contacts
+- 1 direct conversation (Manu ↔ Riya) with 4 messages
+- 1 group conversation ("College Squad") with all 4 users and 4 messages
+- Emoji reactions on the latest messages
+
+Login with any username above to explore immediately.
+
+---
+
+## Deployment
+
+### Backend (Render / Railway / Any VPS)
+
+```bash
+# Install production dependencies
+pip install gunicorn whitenoise
+
+# Set environment variables
+export DEBUG=False
+export SECRET_KEY=<strong-random-key>
+export ALLOWED_HOSTS=your-domain.com
+export CORS_ALLOWED_ORIGINS=https://your-frontend.vercel.app
+
+# Run with Daphne (required for WebSocket support)
+daphne -b 0.0.0.0 -p $PORT config.asgi:application
+```
+
+### Frontend (Vercel)
+
+```bash
+cd frontend
+
+# Set environment variables in Vercel dashboard:
+# NEXT_PUBLIC_API_URL=https://your-backend.onrender.com/api
+# NEXT_PUBLIC_WS_URL=wss://your-backend.onrender.com
+
+vercel --prod
+```
+
+---
+
+## Assumptions & Design Decisions
+
+1. **Mocked OTP** — The OTP is always `123456` and printed to console. A production system would integrate Twilio or similar.
+
+2. **In-Memory Channel Layer** — WebSocket messages are broadcast via Django Channels' in-memory layer. This works for single-process deployments; production would use Redis (`channels_redis`).
+
+3. **SQLite** — Chosen for zero-config setup. The schema is fully relational and would port to PostgreSQL without changes.
+
+4. **JWT in localStorage** — Acceptable for this assignment scope. Production would use httpOnly cookies to prevent XSS token theft.
+
+5. **No real E2E encryption** — Messages are stored in plaintext in SQLite. The UI simulates Signal's privacy UX, but no actual cryptographic protocols are implemented.
+
+6. **Soft-delete for messages** — `is_deleted=True` and body cleared. The message row is preserved for referential integrity (reactions, statuses, reply_to chains).
+
+7. **Lazy disappearing messages** — Messages are filtered at query time rather than deleted by a background job. Production would use Celery beat for periodic cleanup.
+
+8. **File upload limit** — 25 MB server-side validation via `MAX_UPLOAD_SIZE` setting. Configurable in `settings.py`.
+
+9. **Two-step attachment flow** — Create message first (JSON), then attach file (multipart). This keeps the message creation path simple and avoids mixed content types.
+
+10. **Denormalized `last_message`** — Stored as a FK on `Conversation` for O(1) sidebar rendering. Updated atomically on every new message.
+
+---
+
+## License
+
+This project is built as an assignment submission. All code is original work.
