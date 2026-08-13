@@ -88,10 +88,10 @@ export async function searchContacts(query: string) {
   return apiFetch(`/contacts/search?q=${encodeURIComponent(query)}`);
 }
 
-export async function addContact(userId: string) {
+export async function addContact(phoneOrUsername: string, nickname?: string) {
   return apiFetch("/contacts", {
     method: "POST",
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ phone_or_username: phoneOrUsername, nickname: nickname || "" }),
   });
 }
 
