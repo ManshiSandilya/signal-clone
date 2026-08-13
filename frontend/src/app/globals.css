@@ -47,21 +47,14 @@
 }
 
 * {
-  scrollbar-width: thin;
-  scrollbar-color: #3A3A3E transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 *::-webkit-scrollbar {
-  width: 6px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background-color: #3A3A3E;
-  border-radius: 3px;
+  display: none;
+  width: 0px;
+  height: 0px;
 }
 
 body {

@@ -59,7 +59,7 @@ export default function Sidebar({ me }: { me: User }) {
   }
 
   return (
-    <div className={`h-full flex-shrink-0 flex border-r border-signal-border lg:w-[360px] md:w-[84px] ${isChatOpen ? "hidden md:flex" : "w-full"}`}>
+    <div className={`h-full flex-shrink-0 flex ${activeTab === "chats" || showSettings ? "border-r border-signal-border" : ""} lg:w-[360px] md:w-[84px] ${isChatOpen ? "hidden md:flex" : "w-full"}`}>
       {/* ── Left Navigation Strip (Signal Style) ────────────────────────── */}
       <div className="w-[52px] bg-signal-nav flex flex-col items-center justify-between py-4 border-r border-signal-border flex-shrink-0">
         <div className="flex flex-col items-center gap-4 w-full">
