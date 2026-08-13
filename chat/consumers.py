@@ -138,7 +138,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         others = conv.participants.exclude(user=self.user)
         MessageStatus.objects.bulk_create([
-            MessageStatus(message=msg, user=p.user, status="delivered") for p in others
+            MessageStatus(message=msg, user=p.user, status="sent") for p in others
         ])
         return msg
 
