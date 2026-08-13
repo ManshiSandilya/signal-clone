@@ -7,14 +7,18 @@
   --color-signal-blue-light: #5590F5;
 
   /* Backgrounds */
-  --color-signal-bg: #18181A;
-  --color-signal-panel: #18181A;
-  --color-signal-nav: #18181A;
-  --color-signal-sidebar: #18181A;
-  --color-signal-sidebar-hover: #2A2A2E;
-  --color-signal-sidebar-active: #3A3A3E;
-  --color-signal-header: #1B1B1F;
-  --color-signal-input: #2A2A2E;
+  --color-signal-bg: #18181B;
+  --color-signal-panel: #202124;
+  --color-signal-nav: #202124;
+  --color-signal-sidebar: #202124;
+  --color-signal-sidebar-hover: #2A2B2E;
+  --color-signal-sidebar-active: #3A3B3E;
+  --color-signal-header: #202124;
+  --color-signal-input: #2A2B2E;
+
+  /* Icon Gradients */
+  --color-signal-icon-top: #4E84F2;
+  --color-signal-icon-bottom: #3A76F0;
 
   /* Borders */
   --color-signal-border: #2A2A2E;

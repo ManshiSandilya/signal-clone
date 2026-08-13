@@ -1013,6 +1013,13 @@ NEXT_PUBLIC_WS_URL=ws://127.0.0.1:8000
 
 10. **Denormalized `last_message`** — Stored as a FK on `Conversation` for O(1) sidebar rendering. Updated atomically on every new message.
 
+11. **Dark Theme Brand Identity & Chat Customization** — The app aligns with Signal Messenger's official dark mode color tokens:
+    - **Background & Title Bar:** Hex `#202124` (RGB: `32, 33, 36`).
+    - **Primary Brand Blue:** Hex `#3A76F0` (RGB: `58, 118, 240`).
+    - **Icon Gradient (Top):** Hex `#4E84F2` (RGB: `78, 132, 242`).
+    - **Icon Gradient (Bottom):** Hex `#3A76F0` (RGB: `58, 118, 240`).
+    - **Chat Customization UI (Modular & Placeholder):** Designed to support custom wallpaper assignments, adjustable gradient color points, sliding gradient angles, or auto-matching bubble colors to the wallpaper.
+
 ---
 
 ## License

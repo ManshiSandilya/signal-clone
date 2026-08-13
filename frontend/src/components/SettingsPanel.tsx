@@ -242,7 +242,7 @@ export default function SettingsPanel() {
   const title = titleMap[activeSettingsTab] || "Settings";
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#1A1A1E] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-signal-bg overflow-hidden">
       {/* Settings Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-signal-border bg-signal-header flex-shrink-0">
         <button
