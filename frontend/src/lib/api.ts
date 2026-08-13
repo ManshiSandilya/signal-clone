@@ -1,5 +1,6 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 import { Conversation, User } from "./types";
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("access_token");
@@ -17,10 +18,14 @@ export function clearTokens() {
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = getToken();
+  
+  // Conditionally set Content-Type so boundary header is automatically added for FormData
+  const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(options.headers as Record<string, string>),
   };
+  
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
@@ -29,6 +34,9 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     const errBody = await res.json().catch(() => ({}));
     throw new Error(JSON.stringify(errBody));
   }
+  
+  // Some requests (like DELETE 204) do not return JSON body
+  if (res.status === 204) return null;
   return res.json();
 }
 
@@ -55,9 +63,15 @@ export async function register(
   return data.user;
 }
 
-
 export async function getMe(): Promise<User> {
   return apiFetch("/auth/me");
+}
+
+export async function updateProfile(displayName: string, avatarUrl: string | null): Promise<User> {
+  return apiFetch("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify({ display_name: displayName, avatar_url: avatarUrl }),
+  });
 }
 
 export async function getConversations(): Promise<Conversation[]> {
@@ -70,6 +84,13 @@ export async function getContacts() {
 
 export async function getConversation(id: string): Promise<Conversation> {
   return apiFetch(`/conversations/${id}`);
+}
+
+export async function updateConversation(id: string, name?: string, avatarUrl?: string | null): Promise<Conversation> {
+  return apiFetch(`/conversations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ ...(name ? { name } : {}), ...(avatarUrl !== undefined ? { avatar_url: avatarUrl } : {}) }),
+  });
 }
 
 export async function getMessages(conversationId: string) {
@@ -86,6 +107,12 @@ export async function sendMessageRest(conversationId: string, body: string) {
   return apiFetch(`/conversations/${conversationId}/messages`, {
     method: "POST",
     body: JSON.stringify({ body }),
+  });
+}
+
+export async function deleteMessage(messageId: string) {
+  return apiFetch(`/messages/${messageId}`, {
+    method: "DELETE",
   });
 }
 
@@ -111,6 +138,12 @@ export async function createConversation(
   });
 }
 
+export async function leaveConversation(conversationId: string) {
+  return apiFetch(`/conversations/${conversationId}/leave`, {
+    method: "DELETE",
+  });
+}
+
 export async function addMember(conversationId: string, userId: string) {
   return apiFetch(`/conversations/${conversationId}/members`, {
     method: "POST",
@@ -122,5 +155,21 @@ export async function removeMember(conversationId: string, userId: string) {
   return apiFetch(`/conversations/${conversationId}/members`, {
     method: "DELETE",
     body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+export async function setDisappearing(conversationId: string, seconds: number) {
+  return apiFetch(`/conversations/${conversationId}/disappearing`, {
+    method: "POST",
+    body: JSON.stringify({ disappearing_seconds: seconds }),
+  });
+}
+
+export async function uploadAttachment(messageId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch(`/messages/${messageId}/attachment`, {
+    method: "POST",
+    body: formData,
   });
 }

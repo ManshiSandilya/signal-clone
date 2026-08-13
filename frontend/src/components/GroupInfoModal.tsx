@@ -67,9 +67,9 @@ export default function GroupInfoModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-signal-modal-overlay flex items-center justify-center z-50 px-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-lg p-5 max-h-[80vh] flex flex-col"
+        className="bg-signal-modal border border-signal-border rounded-2xl w-full max-w-md shadow-2xl p-5 max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -83,9 +83,9 @@ export default function GroupInfoModal({
           {conversation.participants.length} members
         </p>
 
-        <div className="overflow-y-auto flex-1 mb-3">
+        <div className="overflow-y-auto flex-1 mb-3 pr-1">
           {conversation.participants.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 px-1 py-2">
+            <div key={p.id} className="flex items-center gap-3 py-2 border-b border-signal-border last:border-0">
               <div className="w-9 h-9 rounded-full bg-signal-blue/80 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                 {p.user.display_name.charAt(0).toUpperCase()}
               </div>
@@ -99,7 +99,7 @@ export default function GroupInfoModal({
                 <button
                   onClick={() => handleRemove(p.user)}
                   disabled={busy}
-                  className="text-xs text-red-500 hover:text-red-600 disabled:opacity-50"
+                  className="text-xs text-red-500 hover:text-red-600 disabled:opacity-50 font-medium cursor-pointer"
                 >
                   Remove
                 </button>
@@ -109,13 +109,13 @@ export default function GroupInfoModal({
         </div>
 
         {isAdmin && (
-          <div className="border-t border-signal-border pt-3">
+          <div className="border-t border-signal-border pt-4 mt-2">
             <input
               type="text"
               placeholder="Add member by username..."
               value={query}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full border border-signal-border rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-signal-blue"
+              className="w-full bg-signal-input text-signal-text border border-signal-border rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue"
             />
             <div className="max-h-32 overflow-y-auto">
               {results.map((user) => (
@@ -123,12 +123,12 @@ export default function GroupInfoModal({
                   key={user.id}
                   onClick={() => handleAdd(user)}
                   disabled={busy}
-                  className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left hover:bg-signal-sidebar transition disabled:opacity-50"
+                  className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left hover:bg-signal-sidebar-hover transition disabled:opacity-50"
                 >
                   <div className="w-8 h-8 rounded-full bg-signal-blue/80 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
                     {user.display_name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm text-signal-text">{user.display_name}</span>
+                  <span className="text-sm text-signal-text font-medium">{user.display_name}</span>
                 </button>
               ))}
             </div>

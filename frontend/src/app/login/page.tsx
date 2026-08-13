@@ -27,13 +27,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-signal-sidebar">
-      <div className="w-full max-w-sm bg-signal-bg rounded-2xl shadow-sm border border-signal-border p-8">
+    <div className="min-h-screen flex items-center justify-center bg-signal-bg px-4">
+      <div className="w-full max-w-sm bg-signal-panel rounded-2xl shadow-2xl border border-signal-border p-8">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-full bg-signal-blue flex items-center justify-center text-white text-2xl font-semibold mb-3">
+          {/* Signal Welcome Icon */}
+          <div className="w-14 h-14 rounded-2xl bg-signal-blue flex items-center justify-center text-white text-2xl font-bold mb-3 shadow-md">
             S
           </div>
-          <h1 className="text-xl font-semibold text-signal-text">Sign in</h1>
+          <h1 className="text-xl font-bold text-signal-text">Sign in to Signal</h1>
+          <p className="text-xs text-signal-text-muted mt-1">Enter your phone number or username</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -42,7 +44,7 @@ export default function LoginPage() {
             placeholder="Username or phone number"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue disabled:opacity-60"
+            className="w-full bg-signal-input text-signal-text border border-signal-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue disabled:opacity-60 transition"
             required
             disabled={loading}
           />
@@ -51,22 +53,22 @@ export default function LoginPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue disabled:opacity-60"
+            className="w-full bg-signal-input text-signal-text border border-signal-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue disabled:opacity-60 transition"
             required
             disabled={loading}
           />
 
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-              <p className="text-sm font-medium">Error</p>
-              <p className="text-xs">{error}</p>
+            <div className="bg-red-950/20 border border-red-900/50 text-red-400 px-4 py-3 rounded-lg flex flex-col gap-0.5">
+              <p className="text-xs font-semibold">Error</p>
+              <p className="text-xs opacity-90">{error}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-3 text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-md"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
@@ -74,7 +76,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-signal-text-muted mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-signal-blue font-medium hover:underline">
+          <Link href="/register" className="text-signal-blue font-semibold hover:underline">
             Register
           </Link>
         </p>

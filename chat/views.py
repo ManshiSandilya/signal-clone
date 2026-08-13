@@ -91,8 +91,11 @@ def conversations(request):
     participant_ids.add(str(request.user.id))
 
     if conv_type == "direct" and len(participant_ids) != 2:
-        return Response({"detail": "Direct conversations need exactly 2 participants"},
-                         status=status.HTTP_400_BAD_REQUEST)
+        if len(participant_ids) == 1 and next(iter(participant_ids)) == str(request.user.id):
+            pass
+        else:
+            return Response({"detail": "Direct conversations need exactly 2 participants"},
+                             status=status.HTTP_400_BAD_REQUEST)
 
     if conv_type == "direct":
         candidates = _user_conversations_qs(request.user).filter(type="direct")

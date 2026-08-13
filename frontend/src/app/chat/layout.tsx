@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getMe } from "@/lib/api";
-import { getToken } from "@/lib/api";
+import { useRouter, usePathname } from "next/navigation";
+import { getMe, getToken } from "@/lib/api";
 import { User } from "@/lib/types";
 import Sidebar from "@/components/Sidebar";
+import { ChatProvider } from "@/lib/ChatContext";
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [me, setMe] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const isChatOpen = pathname !== "/chat";
 
   useEffect(() => {
     if (!getToken()) {
@@ -30,9 +33,13 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   if (!me) return null;
 
   return (
-    <div className="flex h-screen bg-signal-bg overflow-hidden">
-      <Sidebar me={me} />
-      <div className="flex-1 flex flex-col">{children}</div>
-    </div>
+    <ChatProvider>
+      <div className="flex h-screen bg-signal-bg overflow-hidden">
+        <Sidebar me={me} />
+        <div className={`flex-1 flex flex-col ${isChatOpen ? "flex" : "hidden md:flex"}`}>
+          {children}
+        </div>
+      </div>
+    </ChatProvider>
   );
 }

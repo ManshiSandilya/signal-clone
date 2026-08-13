@@ -67,9 +67,9 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-signal-modal-overlay flex items-center justify-center z-50 px-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-lg p-5"
+        className="bg-signal-modal border border-signal-border rounded-2xl w-full max-w-md shadow-2xl p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -80,14 +80,14 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Mode toggle */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-4 bg-signal-input p-1 rounded-xl">
           <button
             onClick={() => {
               setMode("direct");
               setSelected([]);
             }}
             className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition ${
-              mode === "direct" ? "bg-signal-blue text-white" : "bg-signal-sidebar text-signal-text-muted"
+              mode === "direct" ? "bg-signal-blue text-white" : "text-signal-text-muted hover:text-signal-text"
             }`}
           >
             Direct message
@@ -98,7 +98,7 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
               setSelected([]);
             }}
             className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition ${
-              mode === "group" ? "bg-signal-blue text-white" : "bg-signal-sidebar text-signal-text-muted"
+              mode === "group" ? "bg-signal-blue text-white" : "text-signal-text-muted hover:text-signal-text"
             }`}
           >
             Group
@@ -111,7 +111,7 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
             placeholder="Group name"
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
-            className="w-full border border-signal-border rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-signal-blue"
+            className="w-full bg-signal-input text-signal-text border border-signal-border rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue"
           />
         )}
 
@@ -121,10 +121,10 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
             {selected.map((u) => (
               <span
                 key={u.id}
-                className="flex items-center gap-1 bg-signal-blue/10 text-signal-blue text-xs font-medium rounded-full pl-2.5 pr-1.5 py-1"
+                className="flex items-center gap-1 bg-signal-blue/10 text-signal-blue text-xs font-medium rounded-full pl-2.5 pr-1.5 py-1 border border-signal-blue/20"
               >
                 {u.display_name}
-                <button onClick={() => toggleSelect(u)} className="text-signal-blue/70 hover:text-signal-blue">
+                <button onClick={() => toggleSelect(u)} className="text-signal-blue/70 hover:text-signal-blue ml-1 font-bold">
                   ×
                 </button>
               </span>
@@ -138,18 +138,21 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
           placeholder="Search by username..."
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
-          className="w-full border border-signal-border rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-signal-blue"
+          className="w-full bg-signal-input text-signal-text border border-signal-border rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue"
         />
 
-        <div className="max-h-56 overflow-y-auto mb-3">
+        <div className="max-h-56 overflow-y-auto mb-4">
+          {results.length === 0 && query.trim().length >= 2 && (
+            <p className="text-center text-xs text-signal-text-muted py-4">No matching users found</p>
+          )}
           {results.map((user) => {
             const isSelected = selected.some((u) => u.id === user.id);
             return (
               <button
                 key={user.id}
                 onClick={() => toggleSelect(user)}
-                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left hover:bg-signal-sidebar transition ${
-                  isSelected ? "bg-signal-blue/5" : ""
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-signal-sidebar-hover transition ${
+                  isSelected ? "bg-signal-sidebar-active" : ""
                 }`}
               >
                 <div className="w-9 h-9 rounded-full bg-signal-blue/80 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
@@ -165,12 +168,12 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
           })}
         </div>
 
-        {error && <p className="text-red-500 text-xs mb-2">{error}</p>}
+        {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
 
         <button
           onClick={handleCreate}
           disabled={loading}
-          className="w-full bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60"
+          className="w-full bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60 cursor-pointer"
         >
           {loading ? "Creating..." : mode === "direct" ? "Start chat" : "Create group"}
         </button>

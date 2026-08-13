@@ -35,9 +35,9 @@ export default function AddContactModal({ onClose, onSuccess }: { onClose: () =>
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-signal-modal-overlay flex items-center justify-center z-50 px-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-lg p-5"
+        className="bg-signal-modal border border-signal-border rounded-2xl w-full max-w-md shadow-2xl p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -55,7 +55,7 @@ export default function AddContactModal({ onClose, onSuccess }: { onClose: () =>
               placeholder="e.g., +1234567890 or john_doe"
               value={phoneOrUsername}
               onChange={(e) => setPhoneOrUsername(e.target.value)}
-              className="w-full border border-signal-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue"
+              className="w-full bg-signal-input text-signal-text border border-signal-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue"
               required
               disabled={loading}
             />
@@ -68,7 +68,7 @@ export default function AddContactModal({ onClose, onSuccess }: { onClose: () =>
               placeholder="Give them a friendly name"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              className="w-full border border-signal-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue"
+              className="w-full bg-signal-input text-signal-text border border-signal-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue"
               disabled={loading}
             />
           </div>
@@ -79,7 +79,7 @@ export default function AddContactModal({ onClose, onSuccess }: { onClose: () =>
           <button
             type="submit"
             disabled={loading}
-            className="bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60"
+            className="bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60 cursor-pointer mt-2"
           >
             {loading ? "Adding..." : "Add contact"}
           </button>

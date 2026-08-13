@@ -1,20 +1,44 @@
 @import "tailwindcss";
 
 @theme {
+  /* ── Signal Desktop Dark Theme ──────────────────────────── */
   --color-signal-blue: #3A76F0;
-  --color-signal-blue-dark: #2C5FD1;
-  --color-signal-bg: #FFFFFF;
-  --color-signal-sidebar: #F7F7F9;
-  --color-signal-sidebar-hover: #ECECEF;
-  --color-signal-sidebar-active: #E8EEFD;
-  --color-signal-border: #E4E4E7;
-  --color-signal-text: #1B1B1F;
-  --color-signal-text-muted: #6B7280;
+  --color-signal-blue-dark: #2C6BED;
+  --color-signal-blue-light: #5590F5;
+
+  /* Backgrounds */
+  --color-signal-bg: #121212;
+  --color-signal-panel: #1B1B1F;
+  --color-signal-nav: #1B1B1F;
+  --color-signal-sidebar: #1B1B1F;
+  --color-signal-sidebar-hover: #2A2A2E;
+  --color-signal-sidebar-active: #3A3A3E;
+  --color-signal-header: #1B1B1F;
+  --color-signal-input: #2A2A2E;
+
+  /* Borders */
+  --color-signal-border: #2A2A2E;
+  --color-signal-border-light: #3A3A3E;
+
+  /* Text */
+  --color-signal-text: #E8E8ED;
+  --color-signal-text-muted: #8E8E93;
+  --color-signal-text-dim: #636366;
+
+  /* Message bubbles */
   --color-signal-bubble-sent: #3A76F0;
   --color-signal-bubble-sent-text: #FFFFFF;
-  --color-signal-bubble-received: #F2F2F5;
-  --color-signal-bubble-received-text: #1B1B1F;
+  --color-signal-bubble-received: #2A2A2E;
+  --color-signal-bubble-received-text: #E8E8ED;
+
+  /* Status */
   --color-signal-online: #4CAF50;
+  --color-signal-danger: #FF453A;
+  --color-signal-success: #30D158;
+
+  /* Modal */
+  --color-signal-modal: #252528;
+  --color-signal-modal-overlay: rgba(0, 0, 0, 0.7);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
@@ -22,8 +46,38 @@
   --radius-bubble-tail: 4px;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3A3A3E transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #3A3A3E;
+  border-radius: 3px;
+}
+
 body {
   background: var(--color-signal-bg);
   color: var(--color-signal-text);
   font-family: var(--font-sans);
+}
+
+/* Selection color matching Signal blue */
+::selection {
+  background: rgba(58, 118, 240, 0.3);
+  color: #FFFFFF;
+}
+
+/* Focus ring */
+input:focus,
+button:focus-visible {
+  outline: none;
 }

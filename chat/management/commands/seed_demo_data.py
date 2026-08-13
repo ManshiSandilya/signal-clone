@@ -13,9 +13,9 @@ from chat.models import Conversation, ConversationParticipant, Message, MessageS
 
 DEMO_USERS = [
     {"phone_or_username": "manu", "display_name": "Manu"},
+    {"phone_or_username": "simran", "display_name": "Simran"},
     {"phone_or_username": "riya", "display_name": "Riya Sharma"},
     {"phone_or_username": "amit", "display_name": "Amit Verma"},
-    {"phone_or_username": "sneha", "display_name": "Sneha Patel"},
 ]
 
 DEMO_PASSWORD = "password123"
@@ -44,6 +44,24 @@ class Command(BaseCommand):
                 if owner != other:
                     Contact.objects.get_or_create(owner=owner, contact_user=other)
 
+        # Seed Note to Self for manu
+        note_to_self = Conversation.objects.filter(type="direct", participants__user=users["manu"]).distinct()
+        note_to_self_chat = None
+        for c in note_to_self:
+            if c.participants.count() == 1:
+                note_to_self_chat = c
+                break
+        if not note_to_self_chat:
+            note_to_self_chat = Conversation.objects.create(type="direct", created_by=users["manu"])
+            ConversationParticipant.objects.create(conversation=note_to_self_chat, user=users["manu"])
+        self._seed_messages(note_to_self_chat, [
+            (users["manu"], "hi How are you"),
+        ])
+
+        # Seed Simran direct chat for manu
+        self._get_or_create_direct(users["manu"], users["simran"])
+
+        # Seed Riya direct chat
         direct = self._get_or_create_direct(users["manu"], users["riya"])
         self._seed_messages(direct, [
             (users["manu"], "Hey Riya! Kaisi ho?"),
@@ -55,7 +73,7 @@ class Command(BaseCommand):
         group = Conversation.objects.filter(type="group", name="College Squad").first()
         if not group:
             group = Conversation.objects.create(type="group", name="College Squad", created_by=users["manu"])
-            for username in ["manu", "riya", "amit", "sneha"]:
+            for username in ["manu", "riya", "amit", "simran"]:
                 ConversationParticipant.objects.create(
                     conversation=group, user=users[username],
                     role="admin" if username == "manu" else "member",
@@ -63,7 +81,7 @@ class Command(BaseCommand):
         self._seed_messages(group, [
             (users["manu"], "Squad, placement season shuru ho gaya"),
             (users["amit"], "Bhai kaunsi companies aa rahi hain campus mein?"),
-            (users["sneha"], "TCS aur EPAM already ho chuke, Scaler abhi chal raha hai"),
+            (users["simran"], "TCS aur EPAM already ho chuke, Scaler abhi chal raha hai"),
             (users["riya"], "All the best everyone!"),
         ])
 
