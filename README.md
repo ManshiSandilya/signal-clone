@@ -12,6 +12,27 @@ A full-stack, real-time messaging application that faithfully replicates Signal 
 
 ## Table of Contents
 
+- [User Guide](#user-guide)
+  - [Registration & Login](#registration--login)
+  - [App Layout & Navigation](#app-layout--navigation)
+  - [Icon Reference](#icon-reference)
+  - [Chats Tab](#chats-tab)
+  - [Starting a New Chat](#starting-a-new-chat)
+  - [Sending Messages](#sending-messages)
+  - [Message Actions](#message-actions)
+  - [Emoji Reactions](#emoji-reactions)
+  - [File Attachments](#file-attachments)
+  - [Delivery Receipts & Read Status](#delivery-receipts--read-status)
+  - [Typing Indicators](#typing-indicators)
+  - [Group Chats](#group-chats)
+  - [Note to Self](#note-to-self)
+  - [Disappearing Messages](#disappearing-messages)
+  - [Adding Contacts](#adding-contacts)
+  - [Searching Conversations](#searching-conversations)
+  - [Calls Tab](#calls-tab)
+  - [Stories Tab](#stories-tab)
+  - [Settings](#settings)
+  - [Logging Out](#logging-out)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture Overview](#architecture-overview)
@@ -22,7 +43,450 @@ A full-stack, real-time messaging application that faithfully replicates Signal 
 - [Setup & Installation](#setup--installation)
 - [Seed Data](#seed-data)
 - [Deployment](#deployment)
+- [Environment Variables](#environment-variables)
 - [Assumptions & Design Decisions](#assumptions--design-decisions)
+
+---
+
+## User Guide
+
+### Registration & Login
+
+#### Creating a New Account (3-step registration)
+
+1. **Navigate** to `/register` (or click "Register" on the login page).
+
+2. **Step 1 — Enter Credentials**
+   - Type your **phone number or username** (this will be your unique identifier).
+   - Type a **password** (min 1 character for demo; use something memorable).
+   - Click **"Send OTP"** button.
+
+3. **Step 2 — Verify OTP**
+   - The demo OTP is always **`123456`** (displayed as a hint on screen).
+   - Type `123456` in the OTP input field.
+   - Click **"Verify OTP"**.
+
+4. **Step 3 — Complete Profile**
+   - Type your **display name** (this is what other users will see).
+   - Click **"Create account"**.
+   - ✅ You are automatically logged in and redirected to the **Chats** page.
+
+#### Logging In (existing account)
+
+1. Navigate to `/login`.
+2. Enter your **username/phone** and **password**.
+3. Click **"Sign in"**.
+4. ✅ Redirected to the Chats page.
+
+---
+
+### App Layout & Navigation
+
+The app uses a **three-column layout**:
+
+```
+┌──────────┬─────────────────────┬─────────────────────────────┐
+│ Nav Bar  │    Sidebar Panel    │        Chat Pane            │
+│ (52px)   │  (conversations,    │  (messages, input bar,      │
+│          │   calls, stories,   │   header with actions)      │
+│          │   settings menu)    │                             │
+└──────────┴─────────────────────┴─────────────────────────────┘
+```
+
+**Left Navigation Bar** — A thin vertical strip on the far left with icon buttons:
+
+| Position | Icon | Action |
+|----------|------|--------|
+| Top | ☰ (three horizontal lines) | Opens the **hamburger menu** with profile info, add contact, and logout |
+| 2nd | 💬 (chat bubble) | Switch to **Chats** tab |
+| 3rd | 📞 (phone) | Switch to **Calls** tab |
+| 4th | 📱 (stories icon) | Switch to **Stories** tab |
+| Bottom | ⚙️ (gear) | Toggle **Settings** panel |
+
+The currently active tab is highlighted with a filled icon and a darker background.
+
+---
+
+### Icon Reference
+
+Here is a complete reference of every icon used throughout the app and what it does:
+
+#### Navigation Bar Icons (Left Strip)
+
+| Icon | Visual | Location | What it does |
+|------|--------|----------|-------------|
+| **Hamburger Menu** | ☰ Three horizontal lines | Top of nav bar | Opens dropdown menu (profile, add contact, logout) |
+| **Chats** | 💬 Chat bubble | Nav bar | Shows conversation list |
+| **Calls** | 📞 Phone | Nav bar | Shows calls tab (placeholder) |
+| **Stories** | 📱 Rounded rectangle | Nav bar | Shows stories tab (placeholder) |
+| **Settings** | ⚙️ Gear | Bottom of nav bar | Opens settings panel |
+
+#### Chat Header Icons (Top of chat pane)
+
+| Icon | Visual | Location | What it does |
+|------|--------|----------|-------------|
+| **Back Arrow** | ◀ Chevron left | Left side (mobile only) | Returns to conversation list |
+| **Video Call** | 🎥 Camera with play button | Right side of header | Placeholder — shows "Video calling coming soon!" |
+| **Voice Call** | 📞 Phone | Right side of header | Placeholder — shows "Voice calling coming soon!" |
+| **Search** | 🔍 Magnifying glass | Right side of header | Search within conversation (placeholder) |
+| **More Options** | ••• Three dots (horizontal) | Right side of header | Opens conversation settings dropdown |
+
+#### Sidebar Header Icons (Chats tab)
+
+| Icon | Visual | Location | What it does |
+|------|--------|----------|-------------|
+| **New Chat** | ✏️ Pencil on notepad | Top-right of "Chats" header | Opens "New Chat" modal to create direct or group chats |
+| **Three Dots** | ••• Three filled dots | Next to compose icon | Opens "Add Contact" modal |
+| **Search** | 🔍 Magnifying glass | In search bar | Filter conversations by name |
+| **Filter** | ≡ Three horizontal lines (decreasing) | Right of search bar | Filter chats (coming soon) |
+
+#### Message Bubble Icons
+
+| Icon | Visual | Meaning |
+|------|--------|---------|
+| **Single Tick** | ✓ | Message sent to server |
+| **Double Tick (grey)** | ✓✓ | Message delivered to recipient |
+| **Double Tick (blue)** | ✓✓ (blue) | Message read by recipient |
+| **Smiley Face** | 😀 | Opens emoji reaction picker on hover |
+| **Trash Can** | 🗑️ | Delete your own message |
+
+#### Calls Tab Icons
+
+| Icon | Visual | What it does |
+|------|--------|-------------|
+| **New Call** | 📞+ Phone with plus | Start a new call (placeholder) |
+| **Three Dots** | ••• | More options (placeholder) |
+| **Link** | 🔗 Chain link icon | Create a Call Link (placeholder) |
+
+#### Stories Tab Icons
+
+| Icon | Visual | What it does |
+|------|--------|-------------|
+| **Plus** | ✚ | Add a new story (placeholder) |
+| **Three Dots** | ••• | More options (placeholder) |
+| **Plus Badge** | Small blue + on avatar | Indicates "Add a story" on My Story |
+| **Checkmark Badge** | ✓ Blue circle | Verified/Official account (Signal) |
+
+#### Conversation List Icons
+
+| Icon | Visual | Meaning |
+|------|--------|---------|
+| **Green Dot** | 🟢 Small green circle | User is currently online |
+| **Blue Badge** | Numbered circle | Unread message count |
+| **Notepad Icon** | 📝 Lines on rectangle | "Note to Self" conversation |
+| **Group Avatar** | 👥 Two-person silhouette | Group conversation |
+
+---
+
+### Chats Tab
+
+The **Chats** tab is the default view when you open the app.
+
+**What you see:**
+- **Header** with "Chats" title, compose (✏️) button, and three-dots (•••) button
+- **Search bar** to filter conversations by name
+- **Conversation list** showing all your active chats, sorted by most recent activity
+
+**Each conversation row shows:**
+- **Avatar** — First letter of the contact's name (or group icon)
+- **Name** — Display name or group name
+- **Last message preview** — Truncated text of the most recent message
+- **Timestamp** — When the last message was sent (e.g., "2m", "1h", "3d")
+- **Unread badge** — Blue circle with count (if unread messages exist)
+- **Online indicator** — Green dot on avatar if the user is currently online
+
+**Click any conversation** to open it in the right chat pane.
+
+---
+
+### Starting a New Chat
+
+1. Click the **compose icon** (✏️ pencil) in the Chats header.
+2. The **"New chat"** modal opens with two modes:
+   - **Direct message** — For 1-on-1 conversations
+   - **Group** — For group conversations
+
+#### Creating a Direct Message
+
+1. Select the **"Direct message"** tab (selected by default).
+2. In the search field, type a username or display name (minimum 2 characters).
+3. Search results appear below — click on a user to select them (they'll be highlighted).
+4. Click **"Create"** button.
+5. ✅ The conversation opens immediately. If a conversation with that user already exists, you'll be taken to the existing one.
+
+#### Creating a Group Chat
+
+1. Click the **"Group"** tab in the modal.
+2. Enter a **Group name** in the text field.
+3. Search for users and **click to select multiple members** (they appear as selected chips).
+4. Click to deselect if you change your mind.
+5. Click **"Create"** button.
+6. ✅ A new group conversation is created with you as the admin.
+
+#### Creating a "Note to Self"
+
+1. In the New Chat modal, click the **"Note to Self"** button at the bottom (appears in both Direct and Group modes).
+2. ✅ A personal chat is created where you can send messages only to yourself. Useful for bookmarks, reminders, and drafts.
+
+---
+
+### Sending Messages
+
+1. Open any conversation by clicking on it in the sidebar.
+2. Type your message in the **input field** at the bottom of the chat pane.
+3. Press **Enter** or click the **Send button** (➤ arrow icon) to send.
+4. Your message appears instantly on the right side (blue bubble) with a timestamp and delivery status tick.
+
+**Emoji in messages:**
+- Click the **😀 smiley face** icon to the left of the input field to open an emoji picker.
+- Select an emoji to insert it into your message.
+- The picker shows 10 quick-access emojis: 😀 😂 😍 😭 🥺 👍 ❤️ 🔥 ✨ 🎉
+
+---
+
+### Message Actions
+
+**Hover over any message bubble** to reveal action buttons:
+
+- **😀 Smiley icon** — Opens the emoji reaction picker (add a reaction to the message)
+- **🗑️ Trash icon** — Delete the message (only visible on your own messages)
+
+#### Deleting a Message
+
+1. Hover over your own message.
+2. Click the **trash can icon** (🗑️).
+3. The message body is replaced with *"This message was deleted"* in italic.
+4. The deletion is visible to all participants in real-time.
+
+> **Note:** You can only delete your own messages. The message row is preserved for referential integrity.
+
+---
+
+### Emoji Reactions
+
+React to any message with an emoji:
+
+1. **Hover** over a message bubble.
+2. Click the **smiley face** (😀) button that appears.
+3. An emoji picker appears with options: 😀 😂 😍 😭 🥺 👍 ❤️ 🔥 ✨ 🎉
+4. Click an emoji to react.
+5. The reaction appears **below the message bubble** as a small badge.
+6. Other participants see the reaction in real-time.
+
+**To remove your reaction:**
+- Click the same emoji reaction badge below the message — it will be removed.
+
+---
+
+### File Attachments
+
+Send files along with messages:
+
+1. Click the **paperclip icon** (📎) in the input bar.
+2. Select a file from your device (max **25 MB**).
+3. The file name appears as a preview in the input area.
+4. Optionally type a message to accompany the file.
+5. Click **Send** (➤).
+6. The file is uploaded and attached to the message.
+
+> **Supported files:** Any file type up to 25 MB. The backend validates the size server-side.
+
+---
+
+### Delivery Receipts & Read Status
+
+Messages show delivery status with tick marks (just like Signal):
+
+| Status | Visual | Meaning |
+|--------|--------|---------|
+| **Sent** | ✓ (single grey tick) | Message has been sent to the server |
+| **Delivered** | ✓✓ (double grey ticks) | Message has been delivered to the recipient's device |
+| **Read** | ✓✓ (double blue ticks) | Message has been opened and read by the recipient |
+
+- Ticks appear in the **bottom-right corner** of your sent message bubbles.
+- In group chats, the status reflects the aggregate of all recipients.
+
+---
+
+### Typing Indicators
+
+When another user is typing in a conversation you're viewing:
+
+- A **"✍️ Alice is typing..."** message appears below the last message.
+- The text **pulses** with a subtle animation.
+- The indicator disappears after 3 seconds of inactivity or when the user sends their message.
+
+Your typing is also broadcast to other participants when you start typing in the input field.
+
+---
+
+### Group Chats
+
+#### Viewing Group Info
+
+1. Open a group conversation.
+2. Click the **three dots** (•••) in the chat header.
+3. Click **"View group members"** from the dropdown.
+4. A modal shows all members with their roles (Admin / Member).
+
+#### Managing Members (Admin only)
+
+If you are the group admin:
+
+- **Add members** — In the Group Info modal, search for users and click "Add".
+- **Remove members** — Click the "Remove" button next to a member's name.
+- **Update group name/avatar** — Available in the group info panel.
+
+#### Leaving a Group
+
+1. Click the **three dots** (•••) in the chat header.
+2. Click **"Leave group"** (red text at the bottom of the dropdown).
+3. Confirm the action in the dialog.
+4. ✅ You are removed from the group and redirected to the chats list.
+
+---
+
+### Note to Self
+
+A special personal chat for sending messages to yourself:
+
+**How to create it:**
+1. Click the compose (✏️) button → "New Chat" modal.
+2. Click **"Note to Self"** button at the bottom.
+
+**What it looks like:**
+- Has a unique **notepad icon** (📝) instead of a regular avatar.
+- Shows a **blue "Official chat" badge** (✓) next to the name.
+- Displays a special introduction card explaining the feature.
+- The header shows "Note to Self" with the verified badge.
+
+**Use it for:** Personal reminders, bookmarks, draft messages, and quick notes.
+
+---
+
+### Disappearing Messages
+
+Set a timer to auto-delete messages in any conversation:
+
+1. Open a conversation.
+2. Click the **three dots** (•••) in the chat header.
+3. Under **"Disappearing messages"**, select a timer from the dropdown:
+   - **Off** — Messages persist forever
+   - **30 seconds**
+   - **5 minutes**
+   - **1 hour**
+   - **1 day**
+4. The setting applies to all future messages in the conversation.
+5. Other participants are notified of the change in real-time.
+
+> **Note:** Messages are filtered at query time, not deleted by a background job.
+
+---
+
+### Adding Contacts
+
+There are **two ways** to add contacts:
+
+#### Method 1: Hamburger Menu
+
+1. Click the **☰ hamburger** icon (top of the left nav bar).
+2. Click **"Add contact"** from the dropdown menu.
+3. Enter the user's **phone number or username**.
+4. Optionally add a **nickname**.
+5. Click **"Add"**.
+
+#### Method 2: Three Dots Button
+
+1. In the Chats tab, click the **three dots** (•••) button next to the compose icon.
+2. The "Add Contact" modal opens.
+3. Follow the same steps as above.
+
+After adding a contact, you can find them when creating new conversations.
+
+---
+
+### Searching Conversations
+
+**In the Sidebar (Chats tab):**
+
+1. Use the **search bar** at the top of the conversation list.
+2. Type a name — conversations are filtered **in real-time** as you type.
+3. Matches are found by display name or group name (case-insensitive).
+4. Clear the search to see all conversations again.
+
+**Searching for Users (when creating chats or adding contacts):**
+
+1. Open the "New Chat" modal or "Add Contact" modal.
+2. Type at least **2 characters** to trigger a search.
+3. Results match against both **username** and **display name**.
+
+---
+
+### Calls Tab
+
+Click the **📞 phone icon** in the left navigation bar.
+
+**What you see:**
+- **Header** with "Calls" title, "New call" (📞+) button, and "More" (•••) button
+- **Search bar** to search calls
+- **Filter button** (≡) to filter call types
+- **"Create a Call Link"** button with a 🔗 link icon — creates a shareable call link
+- **Empty state** message: "No calls — Recent calls will appear here."
+
+> **Note:** Voice and video calling is a **placeholder feature**. The UI is fully built but actual WebRTC calling is not yet implemented.
+
+---
+
+### Stories Tab
+
+Click the **stories icon** (📱 rounded rectangle) in the left navigation bar.
+
+**What you see:**
+- **Header** with "Stories" title, "Add story" (✚) button, and "More" (•••) button
+- **Search bar** to search stories
+- **"My Story"** — Your personal story row with:
+  - Your avatar with a **blue + badge** in the corner
+  - "Add a story" subtitle
+- **"Signal"** — The official Signal story with:
+  - Signal's blue avatar with a **verified checkmark** (✓)
+  - A small thumbnail preview
+
+> **Note:** Stories is a **placeholder feature**. The UI is fully built but story posting and viewing is not yet implemented.
+
+---
+
+### Settings
+
+Click the **⚙️ gear icon** at the bottom of the left navigation bar.
+
+**The sidebar switches to a settings menu** with your profile header and the following categories:
+
+| Category | Icon | What it contains |
+|----------|------|-----------------|
+| **General** | ⚙️ | Startup options, system tray, spell check, device name |
+| **Appearance** | 🎨 | Theme selection, language, zoom level |
+| **Chats** | 💬 | Chat folders (create, manage, suggested folders like Unread/1:1/Groups) |
+| **Calls** | 📞 | Call relay settings |
+| **Notifications** | 🔔 | Notification preferences, sound, badges |
+| **Privacy** | 🔒 | Read receipts, typing indicators, disappearing messages default |
+| **Data usage** | 🌐 | Media auto-download, storage management |
+| **Backups** | ⏰ | Backup and restore settings |
+| **Donate to Signal** | ❤️ | Donation options |
+
+Click any category to view its settings in the main panel. Click the **⚙️ gear** icon again (or any tab icon) to exit settings.
+
+---
+
+### Logging Out
+
+1. Click the **☰ hamburger** icon at the top of the left navigation bar.
+2. In the dropdown menu, you'll see:
+   - Your display name and account info
+   - "Add contact" option
+   - "Preferences" (disabled)
+   - "Keyboard shortcuts" (disabled)
+3. Click **"Logout"** (red text at the bottom).
+4. ✅ You are logged out and redirected to the login page.
 
 ---
 
@@ -281,6 +745,9 @@ The JWT is validated in middleware. Unauthenticated connections are closed with 
 
 // Add reaction
 { "action": "react", "message_id": "<uuid>", "emoji": "❤️" }
+
+// Remove reaction
+{ "action": "remove_react", "message_id": "<uuid>" }
 ```
 
 ### Server → Client Events
@@ -366,6 +833,7 @@ signal-clone/
 ├── .env.example                 # Environment variable template
 ├── .gitignore
 ├── manage.py
+├── render.yaml                  # Render deployment config
 └── README.md                    # ← You are here
 ```
 
@@ -398,8 +866,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install django djangorestframework djangorestframework-simplejwt \
-            django-cors-headers channels daphne python-dotenv
+pip install -r requirements.txt
 
 # Copy environment file
 cp .env.example .env
@@ -460,20 +927,18 @@ Login with any username above to explore immediately.
 
 ## Deployment
 
-### Backend (Render / Railway / Any VPS)
+### Backend (Render)
+
+The project includes a `render.yaml` for one-click deployment:
 
 ```bash
-# Install production dependencies
-pip install gunicorn whitenoise
+# Using Render Blueprint
+# Just connect your GitHub repo and Render auto-deploys using render.yaml
 
-# Set environment variables
-export DEBUG=False
-export SECRET_KEY=<strong-random-key>
-export ALLOWED_HOSTS=your-domain.com
-export CORS_ALLOWED_ORIGINS=https://your-frontend.vercel.app
-
-# Run with Daphne (required for WebSocket support)
-daphne -b 0.0.0.0 -p $PORT config.asgi:application
+# Or deploy manually:
+# Set environment variables (see Environment Variables section below)
+# Build command: ./build.sh
+# Start command: daphne -b 0.0.0.0 -p $PORT config.asgi:application
 ```
 
 ### Frontend (Vercel)
@@ -486,6 +951,42 @@ cd frontend
 # NEXT_PUBLIC_WS_URL=wss://your-backend.onrender.com
 
 vercel --prod
+```
+
+---
+
+## Environment Variables
+
+### Backend (Render / Production)
+
+Set these in your hosting provider's environment variable settings:
+
+| Variable | Required | Example Value | Description |
+|----------|----------|---------------|-------------|
+| `SECRET_KEY` | ✅ | `j-7pb2#v8=iq$kw0))*ti)...` | Django secret key. Generate with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
+| `DEBUG` | ✅ | `False` | **Must be `False` in production** |
+| `ALLOWED_HOSTS` | ✅ | `signal-clone-backend-5so7.onrender.com` | Comma-separated list of allowed hostnames. **If empty, Django rejects all requests!** |
+| `DATABASE_URL` | ✅ | `postgres://user:pass@host/db` | PostgreSQL connection string (provided by Render if using their DB) |
+| `CORS_ALLOWED_ORIGINS` | Optional | `https://signal-clone-theta.vercel.app` | Not strictly needed since `CORS_ALLOW_ALL_ORIGINS=True`, but good for security |
+
+> ⚠️ **Important:** If `ALLOWED_HOSTS` is set as an environment variable but left **empty**, Django will reject ALL incoming requests. Either set it to your domain or remove it entirely (defaults to `*`).
+
+### Frontend (Vercel)
+
+Set these in Vercel's Environment Variables settings:
+
+| Variable | Required | Example Value | Description |
+|----------|----------|---------------|-------------|
+| `NEXT_PUBLIC_API_URL` | ✅ | `https://signal-clone-backend-5so7.onrender.com/api` | Backend REST API base URL |
+| `NEXT_PUBLIC_WS_URL` | ✅ | `wss://signal-clone-backend-5so7.onrender.com` | Backend WebSocket base URL (use `wss://` for HTTPS) |
+
+### Local Development
+
+The `.env.local` file in `frontend/` should contain:
+
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api
+NEXT_PUBLIC_WS_URL=ws://127.0.0.1:8000
 ```
 
 ---
