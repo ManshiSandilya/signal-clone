@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { searchContacts, createConversation } from "@/lib/api";
 import { User } from "@/lib/types";
 
-export default function NewChatModal({ onClose }: { onClose: () => void }) {
+export default function NewChatModal({ onClose, me }: { onClose: () => void; me: User }) {
   const router = useRouter();
   const [mode, setMode] = useState<"direct" | "group">("direct");
   const [query, setQuery] = useState("");
@@ -142,6 +142,40 @@ export default function NewChatModal({ onClose }: { onClose: () => void }) {
         />
 
         <div className="max-h-56 overflow-y-auto mb-4">
+          {mode === "direct" && (
+            (query.trim().length === 0 ||
+              "note to self".includes(query.toLowerCase()) ||
+              me.display_name.toLowerCase().includes(query.toLowerCase()) ||
+              me.phone_or_username.toLowerCase().includes(query.toLowerCase()))
+          ) && (
+            <button
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const conv = await createConversation("direct", [me.id]);
+                  window.dispatchEvent(new CustomEvent("conversations:refresh"));
+                  onClose();
+                  router.push(`/chat/${conv.id}`);
+                } catch {
+                  setError("Could not create Note to Self.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-signal-sidebar-hover transition mb-2"
+            >
+              <div className="w-9 h-9 rounded-full bg-signal-blue flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-signal-text truncate">Note to Self</p>
+                <p className="text-xs text-signal-text-muted truncate">Send messages to yourself</p>
+              </div>
+            </button>
+          )}
           {results.length === 0 && query.trim().length >= 2 && (
             <p className="text-center text-xs text-signal-text-muted py-4">No matching users found</p>
           )}

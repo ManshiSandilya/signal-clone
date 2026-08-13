@@ -21,7 +21,7 @@ import { useChat } from "@/lib/ChatContext";
 function conversationLabel(conv: Conversation, meId: string): string {
   if (conv.type === "group") return conv.name || "Group";
   const other = conv.participants.find((p) => p.user.id !== meId);
-  return other?.user.display_name || "Unknown";
+  return other?.user.display_name || "Note to Self";
 }
 
 export default function ConversationPage() {
@@ -240,7 +240,7 @@ export default function ConversationPage() {
   return (
     <div className="flex-1 flex flex-col h-full bg-signal-bg relative">
       {/* ── Chat Header ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-signal-border bg-signal-header flex-shrink-0 relative">
+      <div className="flex items-center justify-between px-5 py-3 bg-signal-header flex-shrink-0 relative shadow-sm z-10">
         <div className="flex items-center gap-3 min-w-0">
           {/* Mobile Back Button */}
           <button
@@ -307,6 +307,29 @@ export default function ConversationPage() {
 
         {/* Header Actions */}
         <div className="flex items-center gap-2 flex-shrink-0 relative">
+          {/* Video Call Button */}
+          <button
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text transition cursor-pointer"
+            title="Video call"
+            onClick={() => alert("Video calling coming soon!")}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7"></polygon>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+          </button>
+          
+          {/* Phone Call Button */}
+          <button
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text transition cursor-pointer"
+            title="Voice call"
+            onClick={() => alert("Voice calling coming soon!")}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+          </button>
+
           {/* Search Button */}
           <button
             className="w-9 h-9 rounded-lg flex items-center justify-center text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text transition cursor-pointer"
@@ -455,7 +478,7 @@ export default function ConversationPage() {
       </div>
 
       {/* ── Message Form Input ─────────────────────────────────────────── */}
-      <form onSubmit={handleSend} className="flex items-center gap-3 px-4 py-3 border-t border-signal-border bg-signal-header flex-shrink-0">
+      <form onSubmit={handleSend} className="flex items-center gap-3 px-4 py-3 bg-transparent flex-shrink-0 mb-2">
         <input
           type="file"
           id="attachment"
@@ -467,15 +490,10 @@ export default function ConversationPage() {
         {/* Smiley Emoji Trigger Button */}
         <button
           type="button"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-signal-text-muted hover:text-signal-text hover:bg-signal-sidebar-hover transition flex-shrink-0 cursor-pointer"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-signal-text-muted hover:text-signal-text hover:bg-signal-sidebar-hover transition flex-shrink-0 cursor-pointer text-xl"
           title="Stickers / Emojis"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-            <line x1="9" y1="9" x2="9.01" y2="9" />
-            <line x1="15" y1="9" x2="15.01" y2="9" />
-          </svg>
+          😊
         </button>
 
         {attachmentFile && (
@@ -496,7 +514,7 @@ export default function ConversationPage() {
           value={input}
           onChange={(e) => handleInputChange(e.target.value)}
           placeholder={uploading ? "Uploading attachment..." : "Message"}
-          className="flex-1 bg-signal-input text-signal-text border border-signal-border rounded-full px-5 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-signal-blue focus:border-signal-blue"
+          className="flex-1 bg-signal-input text-signal-text rounded-full px-5 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-signal-blue"
           disabled={uploading}
         />
 
@@ -518,7 +536,7 @@ export default function ConversationPage() {
             {/* Microphone Icon Button */}
             <button
               type="button"
-              className="w-10 h-10 rounded-full flex items-center justify-center text-signal-text-muted hover:text-signal-text hover:bg-signal-sidebar-hover transition cursor-pointer border border-signal-border bg-signal-input"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-signal-text hover:bg-signal-sidebar-hover transition cursor-pointer bg-signal-input"
               title="Voice message (Placeholder)"
               onClick={() => alert("Voice messages coming soon!")}
             >
@@ -533,7 +551,7 @@ export default function ConversationPage() {
             {/* Plus Attachment Button */}
             <label
               htmlFor="attachment"
-              className="bg-signal-input border border-signal-border hover:bg-signal-sidebar-hover text-signal-text-muted hover:text-signal-text rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 cursor-pointer transition"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-signal-text hover:bg-signal-sidebar-hover transition cursor-pointer bg-signal-input flex-shrink-0"
               title="Attach file"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

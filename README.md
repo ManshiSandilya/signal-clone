@@ -49,14 +49,18 @@ A full-stack, real-time messaging application that faithfully replicates Signal 
 | **File Attachments** | Upload files to messages (25 MB limit with server-side validation) |
 | **Emoji Reactions** | React to messages with emoji, remove reactions (POST/DELETE) |
 | **Disappearing Messages** | Configurable auto-delete timer per conversation |
-| **Dark/Light UI** | Signal's clean, white-and-blue design language |
+| **Note to Self** | Personal chat — send messages to yourself, searchable by name or "note to self" |
+| **Calls Tab UI** | Full Calls sidebar with search, filter, Create a Call Link button, and empty state |
+| **Stories Tab UI** | Full Stories sidebar with My Story, Signal official story, and story viewer empty state |
+| **Video/Voice Call Icons** | Video camera and phone icons in chat header (placeholder actions) |
+| **Dark Theme** | Signal's authentic dark mode with shadow-based section separation |
 
 ### Placeholder Sections
 
 | Feature | Status |
 |---------|--------|
-| Voice / Video Calls | Placeholder in settings menu |
-| Stories | Placeholder |
+| Voice / Video Calls | UI implemented (sidebar + icons); actual WebRTC calling not wired |
+| Stories | UI implemented (sidebar with My Story + Signal story); posting/viewing not wired |
 | Linked Devices | Placeholder |
 | End-to-End Encryption | Simulated — messages are transmitted over WS and stored in SQLite; no real E2E crypto |
 
@@ -345,15 +349,17 @@ signal-clone/
 │   │   │       ├── page.tsx    # Empty state ("Select a conversation")
 │   │   │       └── [id]/page.tsx # Conversation view + WebSocket
 │   │   ├── components/
-│   │   │   ├── Sidebar.tsx             # Left panel with chat list
-│   │   │   ├── ConversationListItem.tsx # Single chat row
+│   │   │   ├── Sidebar.tsx             # Left panel with chat/calls/stories tabs
+│   │   │   ├── ConversationListItem.tsx # Single chat row (incl. Note to Self)
 │   │   │   ├── MessageBubble.tsx       # Message bubble with receipts
-│   │   │   ├── NewChatModal.tsx        # Create direct/group chat
+│   │   │   ├── NewChatModal.tsx        # Create direct/group chat + Note to Self
 │   │   │   ├── AddContactModal.tsx     # Add contact form
+│   │   │   ├── SettingsPanel.tsx       # User settings panel
 │   │   │   └── GroupInfoModal.tsx      # Group member management
 │   │   └── lib/
 │   │       ├── api.ts          # REST client (fetch wrapper + auth)
-│   │       └── types.ts        # TypeScript interfaces
+│   │       ├── types.ts        # TypeScript interfaces
+│   │       └── ChatContext.tsx  # Shared state (active tab, settings)
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -376,7 +382,7 @@ signal-clone/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/<your-username>/signal-clone.git
+git clone https://github.com/ManshiSandilya/signal-clone.git
 cd signal-clone
 ```
 

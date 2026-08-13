@@ -7,6 +7,8 @@ interface ChatContextType {
   setShowSettings: (val: boolean) => void;
   activeSettingsTab: string;
   setActiveSettingsTab: (val: string) => void;
+  activeTab: string;
+  setActiveTab: (val: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -14,6 +16,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [showSettings, setShowSettings] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState("chats");
+  const [activeTab, setActiveTab] = useState("chats");
 
   return (
     <ChatContext.Provider
@@ -22,6 +25,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setShowSettings,
         activeSettingsTab,
         setActiveSettingsTab,
+        activeTab,
+        setActiveTab,
       }}
     >
       {children}
