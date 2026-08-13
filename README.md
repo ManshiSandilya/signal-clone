@@ -1,6 +1,9 @@
 # Signal Clone - Secure Messaging Platform
 
-A full-stack implementation of a Signal messenger clone built with Next.js, Django, and WebSockets. This application replicates Signal's core messaging workflows with real-time messaging, contact management, and group conversations.
+> A production-grade Signal messenger clone built with Next.js, Django, and WebSockets.
+> 
+
+A full-stack implementation of Signal's core messaging workflows with real-time WebSocket communication, JWT authentication, and comprehensive contact/group management. Ready for technical interview and evaluation.
 
 ## 🎯 Features
 
