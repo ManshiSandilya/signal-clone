@@ -70,3 +70,17 @@ export async function getConversation(id: string): Promise<Conversation> {
 export async function getMessages(conversationId: string) {
   return apiFetch(`/conversations/${conversationId}/messages`);
 }
+
+export function getWsUrl(conversationId: string): string {
+  const token = getToken();
+  const base = (process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8000").replace(/\/$/, "");
+  return `${base}/ws/chat/${conversationId}/?token=${token}`;
+}
+
+export async function sendMessageRest(conversationId: string, body: string) {
+  return apiFetch(`/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
+}
+
