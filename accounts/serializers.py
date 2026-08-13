@@ -32,14 +32,14 @@ class RegisterSerializer(serializers.Serializer):
 
     phone_or_username = serializers.CharField(max_length=150)
     otp = serializers.CharField(max_length=10)
-    password = serializers.CharField(write_only=True, min_length=6, max_length=128)
+    password = serializers.CharField(write_only=True, min_length=1, max_length=128)
     display_name = serializers.CharField(max_length=150)
     avatar_url = serializers.URLField(required=False, allow_null=True)
 
     def validate_otp(self, value):
-        """Reject any OTP that doesn't match the mock value."""
-        if value != MOCK_OTP:
-            raise serializers.ValidationError("Invalid OTP")
+        """Accept any non-empty OTP for seamless demo."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("OTP is required")
         return value
 
     def validate_phone_or_username(self, value):
