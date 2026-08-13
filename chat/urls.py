@@ -8,6 +8,8 @@ urlpatterns = [
     path("conversations/<uuid:conversation_id>/read", views.mark_read),
     path("conversations/<uuid:conversation_id>/members", views.group_members),
     path("conversations/<uuid:conversation_id>/disappearing", views.set_disappearing),
+    path("conversations/<uuid:conversation_id>/leave", views.leave_conversation),
+    path("messages/<uuid:message_id>", views.delete_message),
     path("messages/<uuid:message_id>/attachment", views.upload_attachment),
     path("messages/<uuid:message_id>/reactions", views.react_to_message),
 ]

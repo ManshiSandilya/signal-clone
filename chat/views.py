@@ -2,18 +2,21 @@
 chat/views.py
 
 Endpoints:
-    GET/POST  /api/conversations
-    GET       /api/conversations/<id>
-    GET/POST  /api/conversations/<id>/messages
-    POST      /api/conversations/<id>/read
+    GET/POST      /api/conversations
+    GET/PATCH     /api/conversations/<id>
+    GET/POST      /api/conversations/<id>/messages
+    DELETE        /api/messages/<id>
+    POST          /api/conversations/<id>/read
     GET/POST/DELETE /api/conversations/<id>/members
-    POST      /api/conversations/<id>/disappearing
-    POST      /api/messages/<id>/attachment
-    POST/DELETE /api/messages/<id>/reactions
+    POST          /api/conversations/<id>/disappearing
+    DELETE        /api/conversations/<id>/leave
+    POST          /api/messages/<id>/attachment
+    POST/DELETE   /api/messages/<id>/reactions
 """
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -27,28 +30,56 @@ from accounts.models import User
 from .models import Attachment, Conversation, ConversationParticipant, Message, MessageStatus, Reaction
 from .serializers import (ConversationListSerializer, CreateConversationSerializer,
                             DisappearingSettingSerializer, MessageSerializer, ParticipantSerializer,
-                            ReactToMessageSerializer, SendMessageSerializer)
+                            ReactToMessageSerializer, SendMessageSerializer,
+                            UpdateConversationSerializer)
+
+# ── Maximum attachment size (bytes). Default 25 MB ──────────────────────────
+MAX_UPLOAD_SIZE = getattr(settings, "MAX_UPLOAD_SIZE", 25 * 1024 * 1024)
 
 
 def _user_conversations_qs(user):
-    """Shared query: every conversation the user is a participant of.
-    This is the authorization boundary — stops a user from reading a
-    conversation they're not a member of, no matter what ID they guess."""
+    """Return every conversation the user is a participant of.
+
+    This is the authorization boundary — prevents a user from accessing
+    a conversation they're not a member of, regardless of what ID they guess.
+    """
     return Conversation.objects.filter(participants__user=user).distinct()
 
 
 def _broadcast(conversation_id, event):
-    """Push an event to everyone connected to this conversation's WebSocket
-    group. async_to_sync bridges Channels' async layer into this sync DRF
-    view, so a REST action (e.g. adding a reaction) shows up live in an
-    open chat window exactly like a WS-originated message would."""
+    """Push an event to everyone connected to this conversation's WebSocket group.
+
+    ``async_to_sync`` bridges Channels' async layer into this sync DRF view,
+    so a REST action (e.g. adding a reaction) shows up live in an open chat
+    window exactly like a WS-originated message would.
+    """
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(f"conversation_{conversation_id}", event)
 
 
+# ── Conversations ────────────────────────────────────────────────────────────
+
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def conversations(request):
+    """List the authenticated user's conversations or create a new one.
+
+    **GET** — Returns all conversations the user participates in, ordered
+    by most-recent activity.  Each entry includes a last-message preview
+    and an unread count so the sidebar can render without extra round-trips.
+
+    **POST** — Create a ``direct`` (1-on-1) or ``group`` conversation.
+    For direct conversations, if one already exists between the two users
+    the existing conversation is returned instead of creating a duplicate.
+
+    Request body (POST)::
+
+        {
+            "type": "direct" | "group",
+            "participant_ids": ["<uuid>", ...],
+            "name": "optional group name"
+        }
+    """
     if request.method == "GET":
         qs = _user_conversations_qs(request.user).select_related("last_message").order_by("-last_activity_at")
         return Response(ConversationListSerializer(qs, many=True, context={"request": request}).data)
@@ -84,16 +115,70 @@ def conversations(request):
                      status=status.HTTP_201_CREATED)
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated])
 def conversation_detail(request, conversation_id):
+    """Retrieve or update a single conversation.
+
+    **GET** — Full conversation object (same shape as the list endpoint).
+
+    **PATCH** — Update group metadata (``name`` and/or ``avatar_url``).
+    Only group admins may update these fields.  Direct conversations cannot
+    be renamed.
+
+    Request body (PATCH)::
+
+        {
+            "name": "New Group Name",
+            "avatar_url": "https://example.com/avatar.png"
+        }
+    """
     conv = get_object_or_404(_user_conversations_qs(request.user), id=conversation_id)
+
+    if request.method == "PATCH":
+        # Only group admins can update conversation metadata
+        if conv.type != "group":
+            return Response({"detail": "Cannot update a direct conversation"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        participant = get_object_or_404(ConversationParticipant, conversation=conv, user=request.user)
+        if participant.role != "admin":
+            return Response({"detail": "Only admins can update group info"},
+                            status=status.HTTP_403_FORBIDDEN)
+        serializer = UpdateConversationSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        for field, value in serializer.validated_data.items():
+            setattr(conv, field, value)
+        conv.save(update_fields=list(serializer.validated_data.keys()))
+        _broadcast(conversation_id, {
+            "type": "settings.update",
+            "name": conv.name,
+            "avatar_url": conv.avatar_url,
+        })
+
     return Response(ConversationListSerializer(conv, context={"request": request}).data)
 
+
+# ── Messages ─────────────────────────────────────────────────────────────────
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def messages(request, conversation_id):
+    """List messages in a conversation or send a new one.
+
+    **GET** — Returns all non-deleted messages, including sender info,
+    delivery statuses, attachment metadata, and reactions.
+
+    **POST** — Send a new text message.  Optionally reference ``reply_to``
+    to create a threaded reply.  After persisting, the message is broadcast
+    over WebSocket so all connected participants see it in real-time.
+
+    Request body (POST)::
+
+        {
+            "body": "Hello!",
+            "reply_to": "<uuid>"   // optional
+        }
+    """
     conv = get_object_or_404(_user_conversations_qs(request.user), id=conversation_id)
 
     if request.method == "GET":
@@ -126,9 +211,39 @@ def messages(request, conversation_id):
     return Response(payload, status=status.HTTP_201_CREATED)
 
 
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_message(request, message_id):
+    """Soft-delete a message (set ``is_deleted = True``).
+
+    Only the original sender may delete a message.  The message body is
+    cleared so it cannot leak even if someone queries the database directly.
+    A WebSocket broadcast notifies connected clients so they can replace
+    the bubble with a "This message was deleted" placeholder.
+
+    Returns ``204 No Content`` on success.
+    """
+    msg = get_object_or_404(Message, id=message_id, sender=request.user)
+    msg.is_deleted = True
+    msg.body = ""
+    msg.save(update_fields=["is_deleted", "body"])
+
+    payload = MessageSerializer(msg).data
+    _broadcast(msg.conversation_id, {"type": "chat.message", "payload": payload})
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Read receipts ────────────────────────────────────────────────────────────
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def mark_read(request, conversation_id):
+    """Mark all messages in a conversation as read for the authenticated user.
+
+    Updates the participant's ``last_read_at`` timestamp and flips every
+    ``MessageStatus`` for this user to ``"read"``.  A WebSocket broadcast
+    is sent so the sender's UI can update its read-receipt ticks.
+    """
     participant = get_object_or_404(ConversationParticipant, conversation_id=conversation_id, user=request.user)
     participant.last_read_at = timezone.now()
     participant.save(update_fields=["last_read_at"])
@@ -137,9 +252,21 @@ def mark_read(request, conversation_id):
     return Response({"status": "ok"})
 
 
+# ── Group members ────────────────────────────────────────────────────────────
+
 @api_view(["GET", "POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def group_members(request, conversation_id):
+    """List, add, or remove members of a group conversation.
+
+    **GET** — Returns all participants with their roles.
+
+    **POST** — Add a user to the group (admin-only).  Body: ``{"user_id": "<uuid>"}``
+
+    **DELETE** — Remove a user from the group (admin-only).  Body: ``{"user_id": "<uuid>"}``
+
+    Non-admin participants receive a 403 on POST/DELETE.
+    """
     conv = get_object_or_404(Conversation, id=conversation_id, type="group")
     my_participant = get_object_or_404(ConversationParticipant, conversation=conv, user=request.user)
 
@@ -159,12 +286,18 @@ def group_members(request, conversation_id):
     return Response(ParticipantSerializer(conv.participants.select_related("user"), many=True).data)
 
 
+# ── Disappearing messages ────────────────────────────────────────────────────
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def set_disappearing(request, conversation_id):
-    """Bonus feature. 0 = off. Actual deletion is lazy (checked when messages
-    are fetched) rather than a background cron — acceptable scope for a 24h
-    assignment; production would use Celery beat instead."""
+    """Configure disappearing-message timer for a conversation.
+
+    Set ``disappearing_seconds`` to a positive integer to enable, or ``0``
+    to disable.  Actual deletion is lazy (checked when messages are fetched)
+    rather than a background cron — acceptable scope for a 24 h assignment;
+    production would use Celery beat instead.
+    """
     conv = get_object_or_404(_user_conversations_qs(request.user), id=conversation_id)
     serializer = DisappearingSettingSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -177,18 +310,61 @@ def set_disappearing(request, conversation_id):
     return Response(ConversationListSerializer(conv, context={"request": request}).data)
 
 
+# ── Leave / delete conversation ──────────────────────────────────────────────
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def leave_conversation(request, conversation_id):
+    """Leave a group conversation or delete a direct conversation.
+
+    **Group** — The authenticated user's participation record is removed.
+    If no participants remain, the entire conversation is deleted.
+
+    **Direct** — The authenticated user's participation record is removed,
+    effectively hiding the conversation from their list.  The other user
+    still sees it.  If both leave, the conversation is deleted.
+
+    Returns ``204 No Content`` on success.
+    """
+    conv = get_object_or_404(_user_conversations_qs(request.user), id=conversation_id)
+    ConversationParticipant.objects.filter(conversation=conv, user=request.user).delete()
+
+    # If no participants remain, clean up the entire conversation
+    if not conv.participants.exists():
+        conv.delete()
+
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Attachments ──────────────────────────────────────────────────────────────
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser])
 def upload_attachment(request, message_id):
-    """Attaches a file to an already-created message. Two-step flow (create
-    message via /messages, then attach here) keeps the JSON message-send
-    path simple and lets one Message model serve text-only and file
-    messages without every field being conditional."""
+    """Attach a file to an already-created message.
+
+    Two-step flow (create message via ``/messages``, then attach here) keeps
+    the JSON message-send path simple and lets one ``Message`` model serve
+    text-only and file messages without every field being conditional.
+
+    **Validation** — Rejects files larger than ``MAX_UPLOAD_SIZE`` (default
+    25 MB) to prevent abuse and protect server stability.
+
+    Returns the full message representation including the new attachment.
+    """
     msg = get_object_or_404(Message, id=message_id, sender=request.user)
     file_obj = request.FILES.get("file")
     if not file_obj:
         return Response({"detail": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ── File-size validation ─────────────────────────────────────────────
+    if file_obj.size > MAX_UPLOAD_SIZE:
+        limit_mb = MAX_UPLOAD_SIZE / (1024 * 1024)
+        return Response(
+            {"detail": f"File too large. Maximum allowed size is {limit_mb:.0f} MB."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     Attachment.objects.create(
         message=msg,
@@ -202,11 +378,21 @@ def upload_attachment(request, message_id):
     return Response(payload, status=status.HTTP_201_CREATED)
 
 
+# ── Reactions ────────────────────────────────────────────────────────────────
+
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def react_to_message(request, message_id):
-    """One reaction per user per message — re-reacting replaces the emoji
-    instead of stacking a new one (matches Signal/WhatsApp behavior)."""
+    """Add or remove a reaction on a message.
+
+    **POST** — Set or replace the user's reaction emoji on this message.
+    One reaction per user per message — re-reacting replaces the emoji
+    instead of stacking a new one (matches Signal / WhatsApp behaviour).
+
+    **DELETE** — Remove the user's reaction from this message.
+
+    Both methods broadcast the updated message payload via WebSocket.
+    """
     msg = get_object_or_404(Message, id=message_id)
     is_member = ConversationParticipant.objects.filter(
         conversation_id=msg.conversation_id, user=request.user
