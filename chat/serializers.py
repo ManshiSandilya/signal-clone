@@ -37,7 +37,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class SendMessageSerializer(serializers.Serializer):
-    body = serializers.CharField(allow_blank=True)
+    body = serializers.CharField(max_length=10000, allow_blank=False)
     reply_to = serializers.UUIDField(required=False, allow_null=True)
 
 
@@ -70,7 +70,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
 
 class CreateConversationSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["direct", "group"])
-    name = serializers.CharField(required=False, allow_blank=True)
+    name = serializers.CharField(required=False, allow_blank=True, max_length=150)
     participant_ids = serializers.ListField(child=serializers.UUIDField())
 
 

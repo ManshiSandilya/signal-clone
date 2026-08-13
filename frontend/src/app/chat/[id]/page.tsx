@@ -23,7 +23,11 @@ export default function ConversationPage() {
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [wsError, setWsError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -48,40 +52,66 @@ export default function ConversationPage() {
     }
     load().catch(console.error);
 
-    const ws = new WebSocket(getWsUrl(conversationId));
-    wsRef.current = ws;
+    function connectWebSocket() {
+      if (cancelled) return;
+      
+      const ws = new WebSocket(getWsUrl(conversationId));
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      ws.onopen = () => {
+        setWsConnected(true);
+        setWsError(null);
+        reconnectAttemptsRef.current = 0; // Reset on successful connection
+        ws.send(JSON.stringify({ action: "mark_read" }));
+      };
 
-    if (data.type === "message") {
-        setMessages((prev) => {
-          const exists = prev.some((m) => m.id === data.data.id);
-          if (exists) return prev.map((m) => (m.id === data.data.id ? data.data : m));
-          return [...prev, data.data];
-        });
-        setTypingUser(null);
-        window.dispatchEvent(new CustomEvent("conversations:refresh"));
-      } else if (data.type === "typing") {
-        if (typingClearRef.current) clearTimeout(typingClearRef.current);
-        if (data.is_typing) {
-          setTypingUser(data.display_name);
-          typingClearRef.current = setTimeout(() => setTypingUser(null), 3000);
-        } else {
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "message") {
+          setMessages((prev) => {
+            const exists = prev.some((m) => m.id === data.data.id);
+            if (exists) return prev.map((m) => (m.id === data.data.id ? data.data : m));
+            return [...prev, data.data];
+          });
           setTypingUser(null);
+          window.dispatchEvent(new CustomEvent("conversations:refresh"));
+        } else if (data.type === "typing") {
+          if (typingClearRef.current) clearTimeout(typingClearRef.current);
+          if (data.is_typing) {
+            setTypingUser(data.display_name);
+            typingClearRef.current = setTimeout(() => setTypingUser(null), 3000);
+          } else {
+            setTypingUser(null);
+          }
+        } else if (data.type === "read_receipt" || data.type === "delivery_receipt") {
+          getMessages(conversationId).then(setMessages).catch(console.error);
         }
-      } else if (data.type === "read_receipt" || data.type === "delivery_receipt") {
-        getMessages(conversationId).then(setMessages).catch(console.error);
-      }
-    };
+      };
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ action: "mark_read" }));
-    };
+      ws.onerror = () => {
+        setWsError("Connection error");
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        if (cancelled) return;
+        
+        // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+        const delayMs = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+        reconnectAttemptsRef.current += 1;
+        
+        setWsError(`Disconnected. Reconnecting in ${Math.round(delayMs / 1000)}s...`);
+        reconnectTimeoutRef.current = setTimeout(connectWebSocket, delayMs);
+      };
+    }
+
+    connectWebSocket();
 
     return () => {
       cancelled = true;
-      ws.close();
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      wsRef.current?.close();
     };
   }, [conversationId]);
 
@@ -129,22 +159,26 @@ export default function ConversationPage() {
         <div className="w-9 h-9 rounded-full bg-signal-blue/80 flex items-center justify-center text-white font-medium text-sm">
           {label.charAt(0).toUpperCase()}
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-sm font-medium text-signal-text">{label}</p>
           <p className="text-xs text-signal-text-muted">
-            {conversation.type === "group"
-              ? `${conversation.participants.length} members`
-              : (() => {
-                  const other = conversation.participants.find((p) => p.user.id !== me.id);
-                  if (!other) return "";
-                  if (other.user.is_online) return "Online";
-                  const mins = Math.floor((Date.now() - new Date(other.user.last_seen).getTime()) / 60000);
-                  if (mins < 1) return "Last seen just now";
-                  if (mins < 60) return `Last seen ${mins}m ago`;
-                  const hrs = Math.floor(mins / 60);
-                  if (hrs < 24) return `Last seen ${hrs}h ago`;
-                  return `Last seen ${Math.floor(hrs / 24)}d ago`;
-                })()}
+            {!wsConnected && wsError ? (
+              <span className="text-yellow-600">{wsError}</span>
+            ) : conversation.type === "group" ? (
+              `${conversation.participants.length} members`
+            ) : (
+              (() => {
+                const other = conversation.participants.find((p) => p.user.id !== me.id);
+                if (!other) return "";
+                if (other.user.is_online) return "Online";
+                const mins = Math.floor((Date.now() - new Date(other.user.last_seen).getTime()) / 60000);
+                if (mins < 1) return "Last seen just now";
+                if (mins < 60) return `Last seen ${mins}m ago`;
+                const hrs = Math.floor(mins / 60);
+                if (hrs < 24) return `Last seen ${hrs}h ago`;
+                return `Last seen ${Math.floor(hrs / 24)}d ago`;
+              })()
+            )}
           </p>
         </div>
       </div>

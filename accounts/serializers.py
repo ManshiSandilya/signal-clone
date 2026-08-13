@@ -12,10 +12,10 @@ class SendOTPSerializer(serializers.Serializer):
     phone_or_username = serializers.CharField()
 
 class RegisterSerializer(serializers.Serializer):
-    phone_or_username = serializers.CharField()
-    otp = serializers.CharField()
-    password = serializers.CharField(write_only=True, min_length=6)
-    display_name = serializers.CharField()
+    phone_or_username = serializers.CharField(max_length=150)
+    otp = serializers.CharField(max_length=10)
+    password = serializers.CharField(write_only=True, min_length=6, max_length=128)
+    display_name = serializers.CharField(max_length=150)
     avatar_url = serializers.URLField(required=False, allow_null=True)
 
     def validate_otp(self, value):

@@ -41,10 +41,15 @@ export async function login(phone_or_username: string, password: string) {
   return data.user;
 }
 
-export async function register(phone_or_username: string, password: string, display_name: string) {
+export async function register(
+  phone_or_username: string,
+  password: string,
+  display_name: string,
+  otp: string
+) {
   const data = await apiFetch("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ phone_or_username, password, display_name }),
+    body: JSON.stringify({ phone_or_username, password, display_name, otp }),
   });
   setTokens(data.access_token, data.refresh_token);
   return data.user;

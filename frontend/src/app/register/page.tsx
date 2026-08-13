@@ -56,7 +56,7 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await register(phone, password, displayName);
+      await register(phone, password, displayName, otp);
       router.push("/chat");
     } catch (err: any) {
       try {
@@ -93,7 +93,7 @@ export default function RegisterPage() {
               placeholder="Phone number or username"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue"
+              className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue disabled:opacity-60"
               required
               disabled={loading}
             />
@@ -102,15 +102,19 @@ export default function RegisterPage() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue"
+              className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue disabled:opacity-60"
               required
               disabled={loading}
             />
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}
-              className="bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60"
+              className="bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? "Sending..." : "Send OTP"}
             </button>
@@ -157,22 +161,26 @@ export default function RegisterPage() {
               placeholder="Display name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue"
+              className="border border-signal-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-signal-blue disabled:opacity-60"
               required
               disabled={loading}
             />
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}
-              className="bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60"
+              className="bg-signal-blue hover:bg-signal-blue-dark text-white rounded-lg py-2.5 text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? "Creating account..." : "Create account"}
             </button>
             <button
               type="button"
               onClick={() => setStep("otp")}
-              className="text-signal-blue text-sm font-medium"
+              className="text-signal-blue text-sm font-medium hover:underline"
               disabled={loading}
             >
               Back

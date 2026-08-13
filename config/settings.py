@@ -10,7 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+# Try to load from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed, use environment variables directly
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +28,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2htxw8dc0#yg(a%64a4k1_37!nblr64mh1fsn-)n^vu#p+r8e$'
+SECRET_KEY = os.getenv(
+    'SECRET_KEY',
+    'django-insecure-2htxw8dc0#yg(a%64a4k1_37!nblr64mh1fsn-)n^vu#p+r8e$'
+)  # Change this in production!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS]
 
 
 # Application definition
@@ -56,9 +68,21 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-AUTH_USER_MODEL = 'accounts.User'   
+AUTH_USER_MODEL = 'accounts.User'
 
-CORS_ALLOW_ALL_ORIGINS = True      
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:3000,http://127.0.0.1:3000'
+).split(',')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS]
+
+# In production, set specific origins. For dev, allow localhost
+if not DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    # Development only - allow localhost
+    CORS_ALLOW_ALL_ORIGINS = False      
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
