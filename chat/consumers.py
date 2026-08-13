@@ -55,6 +55,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self._handle_mark_read()
         elif action == "react":
             await self._handle_react(data)
+        elif action == "remove_react":
+            await self._handle_remove_react(data)
 
     async def _handle_send_message(self, data):
         message = await self._save_message(data.get("body", ""), data.get("reply_to"))
@@ -169,4 +171,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
         Reaction.objects.update_or_create(
             message=msg, user=self.user, defaults={"emoji": emoji}
         )
+        return msg
+
+    async def _handle_remove_react(self, data):
+        message_id = data.get("message_id")
+        if not message_id:
+            return
+        message = await self._remove_reaction(message_id)
+        if message is None:
+            return
+        payload = await database_sync_to_async(lambda: MessageSerializer(message).data)()
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "chat.message", "payload": payload}
+        )
+
+    @database_sync_to_async
+    def _remove_reaction(self, message_id):
+        try:
+            msg = Message.objects.get(id=message_id, conversation_id=self.conversation_id)
+        except Message.DoesNotExist:
+            return None
+        Reaction.objects.filter(message=msg, user=self.user).delete()
         return msg

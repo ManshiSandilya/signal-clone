@@ -1,5 +1,5 @@
 import { Message } from "@/lib/types";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { deleteMessage } from "@/lib/api";
 
 function formatBubbleTime(dateStr: string): string {
@@ -30,6 +30,7 @@ export default function MessageBubble({
   isFirstInGroup = true,
   isLastInGroup = true,
   onReact,
+  onRemoveReact,
   onDeleted,
 }: {
   message: Message;
@@ -37,13 +38,40 @@ export default function MessageBubble({
   isFirstInGroup?: boolean;
   isLastInGroup?: boolean;
   onReact?: (emoji: string) => void;
+  onRemoveReact?: () => void;
   onDeleted?: () => void;
 }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  
+  const reactionPickerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
   const isMine = message.sender.id === meId;
   const isDeleted = message.is_deleted;
+  const isSystemMessage = message.body.startsWith("🕒 ");
+
+  if (isSystemMessage) {
+    return (
+      <div className="flex justify-center my-3 px-4 w-full select-none">
+        <p className="text-xs font-medium text-signal-text-muted bg-signal-sidebar/50 px-3 py-1.5 rounded-lg text-center max-w-[80%]">
+          {message.body}
+        </p>
+      </div>
+    );
+  }
 
   const tailClass = isLastInGroup
     ? isMine
@@ -159,7 +187,7 @@ export default function MessageBubble({
 
           {/* Emoji Picker (Positioned to expand inside viewport to prevent cutoff) */}
           {showEmojiPicker && !isDeleted && (
-            <div className={`absolute ${isMine ? "right-0 -top-14" : "left-0 -top-14"} bg-signal-panel border border-signal-border rounded-xl shadow-2xl p-1.5 z-20 flex gap-0.5 flex-nowrap w-auto whitespace-nowrap`}>
+            <div ref={reactionPickerRef} className={`absolute ${isMine ? "right-0 -top-14" : "left-0 -top-14"} bg-signal-panel border border-signal-border rounded-xl shadow-2xl p-1.5 z-20 flex gap-0.5 flex-nowrap w-auto whitespace-nowrap`}>
               {reactions.map((emoji) => (
                 <button
                   key={emoji}
@@ -181,7 +209,7 @@ export default function MessageBubble({
               return (
                 <button
                   key={r.id}
-                  onClick={() => isMyReaction && onReact && onReact(r.emoji)}
+                  onClick={() => isMyReaction && onRemoveReact && onRemoveReact()}
                   className={`text-xs border rounded-full px-2 py-0.5 transition cursor-pointer ${
                     isMyReaction
                       ? "bg-signal-blue/20 border-signal-blue text-signal-blue"

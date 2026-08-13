@@ -42,6 +42,9 @@ export default function ConversationPage() {
   const [wsConnected, setWsConnected] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showInputEmojiPicker, setShowInputEmojiPicker] = useState(false);
+  
+  const INPUT_EMOJIS = ["😀","😂","😍","😭","🥺","👍","❤️","🔥","✨","🎉"];
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -49,6 +52,21 @@ export default function ConversationPage() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowInputEmojiPicker(false);
+      }
+    }
+    if (showInputEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showInputEmojiPicker]);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -151,6 +169,12 @@ export default function ConversationPage() {
   function handleReaction(messageId: string, emoji: string) {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ action: "react", message_id: messageId, emoji }));
+    }
+  }
+
+  function handleRemoveReaction(messageId: string) {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action: "remove_react", message_id: messageId }));
     }
   }
 
@@ -464,6 +488,7 @@ export default function ConversationPage() {
                 isFirstInGroup={isFirstInGroup}
                 isLastInGroup={isLastInGroup}
                 onReact={(emoji) => handleReaction(m.id, emoji)}
+                onRemoveReact={() => handleRemoveReaction(m.id)}
                 onDeleted={loadMessages}
               />
             );
@@ -488,13 +513,35 @@ export default function ConversationPage() {
         />
 
         {/* Smiley Emoji Trigger Button */}
-        <button
-          type="button"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-signal-text-muted hover:text-signal-text hover:bg-signal-sidebar-hover transition flex-shrink-0 cursor-pointer text-xl"
-          title="Stickers / Emojis"
-        >
-          😊
-        </button>
+        <div className="relative" ref={emojiPickerRef}>
+          <button
+            type="button"
+            onClick={() => setShowInputEmojiPicker(!showInputEmojiPicker)}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-signal-text-muted hover:text-signal-text hover:bg-signal-sidebar-hover transition flex-shrink-0 cursor-pointer text-xl"
+            title="Stickers / Emojis"
+          >
+            😊
+          </button>
+          
+          {/* Input Emoji Picker */}
+          {showInputEmojiPicker && (
+            <div className="absolute bottom-12 left-0 bg-signal-panel border border-signal-border rounded-xl shadow-2xl p-2 z-30 flex gap-1 flex-wrap w-64">
+              {INPUT_EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => {
+                    setInput(prev => prev + emoji);
+                    setShowInputEmojiPicker(false);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-signal-sidebar-hover rounded-lg transition text-xl cursor-pointer"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {attachmentFile && (
           <div className="flex items-center gap-2 bg-signal-input border border-signal-border rounded-lg px-3 py-2 text-xs text-signal-text max-w-xs">

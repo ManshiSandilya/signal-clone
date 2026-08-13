@@ -310,6 +310,37 @@ def set_disappearing(request, conversation_id):
         "type": "settings.update",
         "disappearing_seconds": conv.disappearing_seconds,
     })
+    
+    timer = conv.disappearing_seconds
+    if timer == 0:
+        text = f"{request.user.display_name} disabled disappearing messages."
+    else:
+        # format timer to minutes if multiple of 60
+        time_str = f"{timer // 60} minutes" if timer % 60 == 0 and timer >= 60 else f"{timer} seconds"
+        if timer == 60:
+            time_str = "1 minute"
+        text = f"{request.user.display_name} set the disappearing message timer to {time_str}."
+        
+    msg = Message.objects.create(
+        conversation=conv, 
+        sender=request.user, 
+        body=f"🕒 {text}"
+    )
+    conv.last_message = msg
+    conv.last_activity_at = timezone.now()
+    conv.save(update_fields=["last_message", "last_activity_at"])
+    
+    other_participants = conv.participants.exclude(user=request.user)
+    from .models import MessageStatus
+    MessageStatus.objects.bulk_create([
+        MessageStatus(message=msg, user=p.user, status="sent") for p in other_participants
+    ])
+    
+    # Broadcast the new message
+    from .serializers import MessageSerializer
+    payload = MessageSerializer(msg).data
+    _broadcast(conversation_id, {"type": "chat.message", "payload": payload})
+
     return Response(ConversationListSerializer(conv, context={"request": request}).data)
 
 
