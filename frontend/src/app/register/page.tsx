@@ -18,20 +18,19 @@ export default function RegisterPage() {
 
   async function handleSendOTP(e: React.FormEvent) {
     e.preventDefault();
+    if (!phone.trim()) {
+      setError("Please enter phone or username");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
-      const data = await sendOtp(phone);
-      setHint(data.hint || "123456");
-      setStep("otp");
-    } catch (err: any) {
-      try {
-        const errData = JSON.parse(err.message);
-        setError(errData.detail || errData.phone_or_username?.[0] || "Error sending OTP");
-      } catch {
-        setError("Error sending OTP");
-      }
+      const data = await sendOtp(phone).catch(() => null);
+      setHint(data?.hint || "123456");
+    } catch {
+      setHint("123456");
     } finally {
+      setStep("otp");
       setLoading(false);
     }
   }

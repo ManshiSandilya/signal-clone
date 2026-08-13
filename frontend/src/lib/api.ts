@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://signal-clone-backend-5so7.onrender.com/api").replace(/\/$/, "");
 import { Conversation, User } from "./types";
 
 export function getToken(): string | null {
@@ -106,7 +106,7 @@ export async function getMessages(conversationId: string) {
 
 export function getWsUrl(conversationId: string): string {
   const token = getToken();
-  const base = (process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8000").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_WS_URL || "wss://signal-clone-backend-5so7.onrender.com").replace(/\/$/, "");
   return `${base}/ws/chat/${conversationId}/?token=${token}`;
 }
 
