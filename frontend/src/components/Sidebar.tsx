@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getConversations, clearTokens } from "@/lib/api";
 import { Conversation, User } from "@/lib/types";
@@ -23,6 +23,44 @@ export default function Sidebar({ me }: { me: User }) {
   const [showModal, setShowModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+
+  const [sidebarWidth, setSidebarWidth] = useState(360);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const isResizing = useRef(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    isResizing.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (isResizing.current) {
+        let newWidth = moveEvent.clientX;
+        // If dragged very close to the edge, snap it closed
+        if (newWidth < 150) {
+          setIsSidebarOpen(false);
+        } else {
+          setIsSidebarOpen(true);
+          // Set a minimum width of 280px to prevent it from getting too small
+          if (newWidth < 280) newWidth = 280;
+          // Maximum width constraint
+          if (newWidth > 600) newWidth = 600;
+          setSidebarWidth(newWidth);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, []);
 
   // Retrieve settings state and active tab from ChatContext
   const { showSettings, setShowSettings, activeSettingsTab, setActiveSettingsTab, activeTab, setActiveTab } = useChat();
@@ -53,33 +91,32 @@ export default function Sidebar({ me }: { me: User }) {
     router.push("/login");
   }
 
-  function handleChatsTabClick() {
+  function handleTabClick(tab: "chats" | "calls" | "stories") {
     setShowSettings(false);
-    setActiveTab("chats");
+    setActiveTab(tab);
     router.push("/chat");
   }
 
   return (
-    <div className={`h-full flex-shrink-0 flex border-r border-signal-border/50 lg:w-[360px] md:w-[84px] ${isChatOpen ? "hidden md:flex" : "w-full"}`}>
-      {/* ── Left Navigation Strip (Signal Style) ────────────────────────── */}
+    <>
+      <style>{`
+        .sidebar-responsive {
+          width: 100%;
+        }
+        @media (min-width: 768px) {
+          .sidebar-responsive {
+            width: ${sidebarWidth}px !important;
+          }
+        }
+      `}</style>
+      <div className={`sidebar-responsive h-full flex-shrink-0 flex relative border-r border-signal-border/50 ${isChatOpen ? "hidden md:flex" : "w-full"}`}>
+        {/* ── Left Navigation Strip (Signal Style) ────────────────────────── */}
+      {isSidebarOpen && (
       <div className="w-[52px] bg-signal-nav flex flex-col items-center justify-between py-4 border-r border-signal-border/50 flex-shrink-0">
         <div className="flex flex-col items-center gap-4 w-full">
-          {/* Hamburger Menu / Profile */}
-          <button
-            onClick={() => setShowMenu((v) => !v)}
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text transition cursor-pointer"
-            title="Menu"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-
           {/* Active Chats Tab */}
           <button
-            onClick={handleChatsTabClick}
+            onClick={() => handleTabClick("chats")}
             className={`w-10 h-10 rounded-lg flex items-center justify-center transition relative cursor-pointer ${
               activeTab === "chats" && !showSettings
                 ? "bg-signal-sidebar-active text-signal-text"
@@ -94,11 +131,7 @@ export default function Sidebar({ me }: { me: User }) {
 
           {/* Calls Tab */}
           <button
-            onClick={() => {
-              setShowSettings(false);
-              setActiveTab("calls");
-              router.push("/chat");
-            }}
+            onClick={() => handleTabClick("calls")}
             className={`w-10 h-10 rounded-lg flex items-center justify-center transition cursor-pointer ${
               activeTab === "calls" && !showSettings
                 ? "bg-signal-sidebar-active text-signal-text"
@@ -113,11 +146,7 @@ export default function Sidebar({ me }: { me: User }) {
 
           {/* Stories Tab */}
           <button
-            onClick={() => {
-              setShowSettings(false);
-              setActiveTab("stories");
-              router.push("/chat");
-            }}
+            onClick={() => handleTabClick("stories")}
             className={`w-10 h-10 rounded-lg flex items-center justify-center transition cursor-pointer ${
               activeTab === "stories" && !showSettings
                 ? "bg-signal-sidebar-active text-signal-text"
@@ -137,7 +166,14 @@ export default function Sidebar({ me }: { me: User }) {
         {/* Bottom Gear Icon */}
         <div className="relative">
           <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => {
+              if (showSettings && isSidebarOpen) {
+                setIsSidebarOpen(false);
+              } else {
+                setIsSidebarOpen(true);
+              }
+              setShowSettings(true);
+            }}
             className={`w-10 h-10 rounded-lg flex items-center justify-center transition cursor-pointer ${
               showSettings
                 ? "bg-signal-sidebar-active text-signal-text"
@@ -186,9 +222,10 @@ export default function Sidebar({ me }: { me: User }) {
           )}
         </div>
       </div>
+      )}
 
       {/* ── Middle Panel: Chats / Content ─────────────────────────────── */}
-      <div className="flex-1 bg-signal-sidebar flex flex-col h-full min-w-0">
+      <div className="flex-1 bg-signal-sidebar flex-col h-full min-w-0 flex">
         {showSettings ? (
           /* Settings Mode Sidebar Menu */
           <>
@@ -244,9 +281,23 @@ export default function Sidebar({ me }: { me: User }) {
             {activeTab === "chats" && (
               <>
             {/* Header */}
-            <div className="flex items-center lg:justify-between justify-center px-5 py-4 flex-shrink-0 lg:flex-row md:flex-col gap-3">
-              <h1 className="text-xl font-bold text-signal-text lg:block md:hidden block">Chats</h1>
-              <div className="flex lg:flex-row md:flex-col flex-row items-center gap-1">
+            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                {/* Hamburger Menu Toggle (moved here) */}
+                <button
+                  onClick={() => setIsSidebarOpen((v) => !v)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text transition cursor-pointer"
+                  title="Toggle Menu"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </svg>
+                </button>
+                <h1 className="text-xl font-bold text-signal-text">Chats</h1>
+              </div>
+              <div className="flex items-center gap-1">
                 {/* Compose / New Chat button */}
                 <button
                   onClick={() => setShowModal(true)}
@@ -336,7 +387,20 @@ export default function Sidebar({ me }: { me: User }) {
           <>
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
-              <h1 className="text-xl font-bold text-signal-text">Calls</h1>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsSidebarOpen((v) => !v)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text transition cursor-pointer"
+                  title="Toggle Menu"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </svg>
+                </button>
+                <h1 className="text-xl font-bold text-signal-text">Calls</h1>
+              </div>
               <div className="flex items-center gap-1">
                 <button className="w-8 h-8 rounded-lg text-signal-text hover:bg-signal-sidebar-hover flex items-center justify-center transition cursor-pointer" title="New call">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -406,7 +470,20 @@ export default function Sidebar({ me }: { me: User }) {
           <>
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
-              <h1 className="text-xl font-bold text-signal-text">Stories</h1>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsSidebarOpen((v) => !v)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-signal-text-muted hover:bg-signal-sidebar-hover hover:text-signal-text transition cursor-pointer"
+                  title="Toggle Menu"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </svg>
+                </button>
+                <h1 className="text-xl font-bold text-signal-text">Stories</h1>
+              </div>
               <div className="flex items-center gap-1">
                 <button className="w-8 h-8 rounded-lg text-signal-text hover:bg-signal-sidebar-hover flex items-center justify-center transition cursor-pointer" title="Add story">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -478,6 +555,14 @@ export default function Sidebar({ me }: { me: User }) {
         )}
       </div>
 
+      {/* ── Drag Handle ─────────────────────────────── */}
+      {isChatOpen && (
+        <div 
+          onMouseDown={startResizing}
+          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-signal-blue transition-colors z-10"
+        />
+      )}
+
       {showModal && <NewChatModal onClose={() => setShowModal(false)} me={me} />}
       {showContactModal && (
         <AddContactModal
@@ -488,5 +573,6 @@ export default function Sidebar({ me }: { me: User }) {
         />
       )}
     </div>
+    </>
   );
 }

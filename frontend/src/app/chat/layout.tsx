@@ -34,7 +34,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <ChatProvider>
-      <div className="flex h-screen bg-signal-bg overflow-hidden">
+      <div className="flex flex-1 h-full bg-signal-bg overflow-hidden min-h-0">
         <Sidebar me={me} />
         <div className={`flex-1 flex flex-col ${isChatOpen ? "flex" : "hidden md:flex"}`}>
           {children}
