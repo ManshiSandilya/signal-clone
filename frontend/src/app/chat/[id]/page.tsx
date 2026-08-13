@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { getConversation, getMessages, getMe, getWsUrl } from "@/lib/api";
 import { Conversation, Message, User } from "@/lib/types";
 import MessageBubble from "@/components/MessageBubble";
-
+import GroupInfoModal from "@/components/GroupInfoModal";
 function conversationLabel(conv: Conversation, meId: string): string {
   if (conv.type === "group") return conv.name || "Group";
   const other = conv.participants.find((p) => p.user.id !== meId);
@@ -21,6 +21,8 @@ export default function ConversationPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -88,6 +90,12 @@ export default function ConversationPage() {
       wsRef.current.send(JSON.stringify({ action: "typing", is_typing: isTyping }));
   }, []);
 
+  function handleReaction(messageId: string, emoji: string) {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action: "react", message_id: messageId, emoji }));
+    }
+  }
+
   function handleInputChange(value: string) {
     setInput(value);
     sendTyping(true);
@@ -112,7 +120,12 @@ export default function ConversationPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-signal-border bg-signal-bg flex-shrink-0">
+      <div
+        className={`flex items-center gap-3 px-4 py-3 border-b border-signal-border bg-signal-bg flex-shrink-0 ${
+          conversation.type === "group" ? "cursor-pointer hover:bg-signal-sidebar" : ""
+        }`}
+        onClick={() => conversation.type === "group" && setShowGroupInfo(true)}
+      >
         <div className="w-9 h-9 rounded-full bg-signal-blue/80 flex items-center justify-center text-white font-medium text-sm">
           {label.charAt(0).toUpperCase()}
         </div>
@@ -136,10 +149,23 @@ export default function ConversationPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4">
-        {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} meId={me.id} />
-        ))}
+     <div className="flex-1 overflow-y-auto py-4">
+        {messages.map((m, i) => {
+          const prev = messages[i - 1];
+          const next = messages[i + 1];
+          const isFirstInGroup = !prev || prev.sender.id !== m.sender.id;
+          const isLastInGroup = !next || next.sender.id !== m.sender.id;
+          return (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              meId={me.id}
+              isFirstInGroup={isFirstInGroup}
+              isLastInGroup={isLastInGroup}
+              onReact={(emoji) => handleReaction(m.id, emoji)}
+            />
+          );
+        })}
         {typingUser && (
           <p className="text-xs text-signal-text-muted px-4 italic">{typingUser} is typing...</p>
         )}
@@ -147,6 +173,33 @@ export default function ConversationPage() {
       </div>
 
       <form onSubmit={handleSend} className="flex items-center gap-2 px-4 py-3 border-t border-signal-border flex-shrink-0">
+        <input
+          type="file"
+          id="attachment"
+          onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+          className="hidden"
+        />
+        <label
+          htmlFor="attachment"
+          className="bg-signal-sidebar hover:bg-signal-sidebar-hover text-signal-text-muted rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 cursor-pointer transition"
+          title="Attach file"
+        >
+          📎
+        </label>
+
+        {attachmentFile && (
+          <div className="flex items-center gap-2 bg-signal-sidebar rounded-lg px-3 py-2 text-xs text-signal-text">
+            <span className="truncate">{attachmentFile.name}</span>
+            <button
+              type="button"
+              onClick={() => setAttachmentFile(null)}
+              className="text-signal-text-muted hover:text-signal-text"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <input
           type="text"
           value={input}
@@ -161,6 +214,15 @@ export default function ConversationPage() {
           ➤
         </button>
       </form>
+
+      {showGroupInfo && (
+        <GroupInfoModal
+          conversation={conversation}
+          meId={me.id}
+          onClose={() => setShowGroupInfo(false)}
+          onUpdated={(updated) => setConversation(updated)}
+        />
+      )}
     </div>
   );
 }
