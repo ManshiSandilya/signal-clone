@@ -2,6 +2,7 @@ services:
   - type: web
     name: signal-clone-backend
     env: python
+    plan: free
     buildCommand: "./build.sh"
     startCommand: "daphne -b 0.0.0.0 -p $PORT config.asgi:application"
     envVars:
@@ -20,3 +21,4 @@ databases:
   - name: signal-clone-db
     databaseName: signal_db
     user: signal_user
+    plan: free
