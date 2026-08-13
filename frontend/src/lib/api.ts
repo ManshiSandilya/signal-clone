@@ -40,6 +40,13 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   return res.json();
 }
 
+export async function sendOtp(phone_or_username: string) {
+  return apiFetch("/auth/send-otp", {
+    method: "POST",
+    body: JSON.stringify({ phone_or_username }),
+  });
+}
+
 export async function login(phone_or_username: string, password: string) {
   const data = await apiFetch("/auth/login", {
     method: "POST",

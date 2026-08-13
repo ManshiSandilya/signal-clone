@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { register } from "@/lib/api";
+import { register, sendOtp } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,20 +21,16 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_or_username: phone }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.detail || "Failed to send OTP");
-        return;
-      }
-      setHint(data.hint || "OTP sent (mocked)");
+      const data = await sendOtp(phone);
+      setHint(data.hint || "123456");
       setStep("otp");
-    } catch (err) {
-      setError("Error sending OTP");
+    } catch (err: any) {
+      try {
+        const errData = JSON.parse(err.message);
+        setError(errData.detail || errData.phone_or_username?.[0] || "Error sending OTP");
+      } catch {
+        setError("Error sending OTP");
+      }
     } finally {
       setLoading(false);
     }
