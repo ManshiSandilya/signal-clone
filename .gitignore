@@ -17,3 +17,14 @@ frontend/out/
 # OS
 .DS_Store
 Thumbs.db
+
+# AI config files
+AGENTS.md
+CLAUDE.md
+.agents/
+
+# Media uploads
+media/
+
+# Test scripts
+test_*.py
